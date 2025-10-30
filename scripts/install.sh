@@ -58,6 +58,7 @@ cp -r "$DOTFILES_DIR/.config" "$HOME_DIR/"
 
 # Disable GPG signing to prevent authentication issues
 git config --global commit.gpgsign false
+git config --local commit.gpgsign false
 
 echo "Setting Zsh as default shell..."
 if command -v chsh >/dev/null 2>&1; then
