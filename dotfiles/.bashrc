@@ -3,6 +3,7 @@
 # Set up environment variables
 export EDITOR='code'
 export VISUAL='code'
+export PATH="$HOME/.local/bin:$PATH"
 
 # Aliases
 alias ll='ls -la'
