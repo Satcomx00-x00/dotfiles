@@ -40,39 +40,10 @@ fi
 echo "Installing Zellij..."
 
 if ! command -v zellij >/dev/null 2>&1; then
-    # Detect architecture
-    ARCH=$(uname -m)
-    case $ARCH in
-        x86_64)
-            ZELLIJ_ARCH="x86_64-unknown-linux-musl"
-            ;;
-        aarch64)
-            ZELLIJ_ARCH="aarch64-unknown-linux-musl"
-            ;;
-        *)
-            echo "Unsupported architecture: $ARCH" >&2
-            exit 1
-            ;;
-    esac
-
-    # Get latest release URL
-    ZELLIJ_URL=$(curl -s https://api.github.com/repos/zellij-org/zellij/releases/latest | grep "browser_download_url.*${ZELLIJ_ARCH}.tar.gz" | cut -d '"' -f 4)
-
-    if [ -z "$ZELLIJ_URL" ]; then
-        echo "Could not find Zellij binary for architecture $ZELLIJ_ARCH" >&2
-        exit 1
-    fi
-
-    # Create local bin directory if it doesn't exist
+    # Copy Zellij binary from dotfiles
     mkdir -p "$HOME_DIR/.local/bin"
-
-    # Download and extract
-    TEMP_DIR=$(mktemp -d)
-    curl -L "$ZELLIJ_URL" -o "$TEMP_DIR/zellij.tar.gz"
-    tar -xzf "$TEMP_DIR/zellij.tar.gz" -C "$TEMP_DIR"
-    find "$TEMP_DIR" -name "zellij" -type f -executable -exec mv {} "$HOME_DIR/.local/bin/" \;
-    rm -rf "$TEMP_DIR"
-
+    cp "$DOTFILES_DIR/bin/zellij" "$HOME_DIR/.local/bin/zellij"
+    chmod +x "$HOME_DIR/.local/bin/zellij"
     echo "Zellij installed successfully."
 else
     echo "Zellij already installed; skipping."
@@ -83,10 +54,28 @@ echo "Copying dotfiles into place..."
 cp -f "$DOTFILES_DIR/.gitconfig" "$HOME_DIR/.gitconfig"
 cp -f "$DOTFILES_DIR/.zshrc" "$HOME_DIR/.zshrc"
 cp -f "$DOTFILES_DIR/.p10k.zsh" "$HOME_DIR/.p10k.zsh"
+cp -r "$DOTFILES_DIR/.config" "$HOME_DIR/"
+
+# Disable GPG signing to prevent authentication issues
+git config --global commit.gpgsign false
 
 echo "Setting Zsh as default shell..."
-if command -v chsh >/dev/null 2>&1 && [ "$SHELL" != "$(which zsh)" ]; then
-    sudo chsh -s "$(which zsh)" "$USER" || echo "Could not change shell to zsh (may require password or manual setup)"
+if command -v chsh >/dev/null 2>&1; then
+    # Try with sudo first
+    if sudo chsh -s "$(which zsh)" "$USER" 2>/dev/null; then
+        echo "Shell changed to zsh successfully."
+    # Try without sudo (for environments where it's not needed)
+    elif chsh -s "$(which zsh)" 2>/dev/null; then
+        echo "Shell changed to zsh successfully."
+    # Fallback: modify /etc/passwd directly if possible
+    elif [ -w /etc/passwd ] && grep -q "^$USER:" /etc/passwd; then
+        sed -i "s|^\($USER:.*\):[^:]*$|\1:$(which zsh)|" /etc/passwd
+        echo "Shell changed to zsh successfully."
+    else
+        echo "Could not change shell to zsh automatically. Please run: chsh -s $(which zsh)"
+    fi
+else
+    echo "chsh command not available. Please set zsh as your default shell manually."
 fi
 
 echo "Dotfiles installed successfully."

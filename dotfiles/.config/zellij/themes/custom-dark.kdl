@@ -1,0 +1,26 @@
+// Custom Dark Theme for Zellij
+// Based on the default dark theme with customizations
+
+themes {
+    custom-dark {
+    fg 241 241 241
+    bg 26 26 26
+    black 18 18 18
+    red 165 42 255
+    green 113 41 255
+    yellow 61 42 255
+    blue 43 79 255
+    magenta 40 131 255
+    cyan 40 185 255
+    white 241 241 241
+    orange 186 90 255
+    bright_black 102 102 102
+    bright_red 186 90 255
+    bright_green 144 90 255
+    bright_yellow 104 90 255
+    bright_blue 92 120 255
+    bright_magenta 94 162 255
+    bright_cyan 90 200 255
+    bright_white 255 255 255
+    }
+}

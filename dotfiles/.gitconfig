@@ -1,0 +1,33 @@
+[user]
+    name = Satcom
+    email = satcom@none.com
+
+[core]
+    editor = code --wait
+    autocrlf = input
+    safecrlf = warn
+
+[init]
+    defaultBranch = main
+
+# Disable GPG signing by default to avoid authentication issues
+# Uncomment and configure if you want to enable commit signing
+# [commit]
+#     gpgsign = true
+# [gpg]
+#     program = gpg
+
+[alias]
+    st = status
+    co = checkout
+    ci = commit
+    br = branch
+    lg = log --oneline --graph --decorate
+    unstage = reset HEAD --
+    last = log -1 HEAD
+
+[pull]
+    rebase = true
+
+[push]
+    default = simple
