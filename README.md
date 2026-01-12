@@ -1,53 +1,324 @@
-# Dotfiles
+# 🏠 Modern Dotfiles with Chezmoi
 
-This repository contains dotfiles and an installer for setting up a development environment with Zsh, Oh My Zsh, Powerlevel10k, and Zellij. It provisions the core shell configuration files and ensures the required packages are available.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Project Structure
+A state-of-the-art dotfiles repository managed by [chezmoi](https://www.chezmoi.io/), featuring:
+
+- 🔐 **Secrets management** with encrypted files
+- 🖥️ **Multi-machine support** with templating
+- 🚀 **One-command installation** with automatic bootstrapping
+- 🎨 **Modern shell**: Zsh + Oh My Zsh + Powerlevel10k
+- 📦 **Terminal multiplexer**: Zellij with custom config
+- 🔄 **Automatic updates** and conflict resolution
+- 📝 **Template-driven configuration** for personalization
+- 🪝 **Pre/post installation hooks** for custom setup
+
+## ⚡ Quick Start
+
+### One-Line Installation
+
+```bash
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply Satcomx00-x00/dotfiles
+```
+
+Or if you already have chezmoi installed:
+
+```bash
+chezmoi init --apply Satcomx00-x00/dotfiles
+```
+
+### Manual Installation
+
+```bash
+# 1. Install chezmoi
+curl -fsLS get.chezmoi.io | sh
+
+# 2. Initialize with this repository
+chezmoi init Satcomx00-x00/dotfiles
+
+# 3. Review changes before applying
+chezmoi diff
+
+# 4. Apply the dotfiles
+chezmoi apply -v
+
+# 5. Update later
+chezmoi update -v
+```
+
+## 📦 What's Included
+
+### Shell Environment
+- **Zsh** with intelligent completion and history
+- **Oh My Zsh** framework with curated plugins
+- **Powerlevel10k** theme with rich prompt customization
+- **FZF** fuzzy finder integration
+- **Zoxide** smart directory jumping
+- **Eza** modern replacement for ls
+
+### Terminal
+- **Zellij** terminal multiplexer with custom theme
+- Sensible keybindings and layouts
+- Custom dark theme optimized for productivity
+
+### Development Tools
+- **Git** with powerful aliases and smart defaults
+- **Docker** aliases and shortcuts
+- **Python** development helpers
+- Language-specific configurations
+
+### Configurations
+- `.zshrc` - Comprehensive shell configuration
+- `.gitconfig.tmpl` - Templated Git configuration
+- `.p10k.zsh` - Powerlevel10k theme settings
+- `zellij/` - Terminal multiplexer configuration
+- Custom scripts and utilities
+
+## 🎯 Features
+
+### Template-Based Configuration
+
+Chezmoi uses Go templates to personalize your dotfiles:
+
+```bash
+# On first init, you'll be prompted for:
+- Git name
+- Git email
+- Preferred editor
+- Machine type (personal/work)
+```
+
+These values are stored in `~/.config/chezmoi/chezmoi.toml` and used across all template files.
+
+### Secrets Management
+
+Encrypted files using age or gpg:
+
+```bash
+# Edit encrypted files
+chezmoi edit --watch ~/.ssh/config
+
+# Add encrypted file
+chezmoi add --encrypt ~/.ssh/private_key
+```
+
+### Multi-Machine Support
+
+Different configurations for different machines:
+
+```bash
+# Machine-specific files
+.chezmoi.os.linux.yaml    # Linux-only
+.chezmoi.os.darwin.yaml   # macOS-only
+.chezmoi.hostname.work.yaml  # Work machine
+
+# Template conditions
+{{- if eq .chezmoi.os "linux" }}
+# Linux-specific content
+{{- end }}
+```
+
+## 📖 Usage
+
+### Daily Commands
+
+```bash
+# Check status
+chezmoi status
+
+# See changes
+chezmoi diff
+
+# Apply changes
+chezmoi apply
+
+# Edit a file
+chezmoi edit ~/.zshrc
+
+# Update from repository
+chezmoi update
+
+# Add new file
+chezmoi add ~/.config/newfile
+
+# Re-run scripts
+chezmoi state reset && chezmoi apply
+```
+
+### Advanced Usage
+
+```bash
+# Archive your current dotfiles
+chezmoi archive > dotfiles.tar.gz
+
+# Import from existing dotfiles
+chezmoi import --strip-components 1 https://github.com/user/dotfiles/archive/master.tar.gz
+
+# Execute a template
+chezmoi execute-template '{{ .chezmoi.os }}/{{ .chezmoi.arch }}'
+
+# Manage on multiple machines
+chezmoi init --apply  # On new machine
+chezmoi update        # Pull latest changes
+```
+
+## 🛠️ Customization
+
+### 1. Configure Your Data
+
+Edit `~/.config/chezmoi/chezmoi.toml`:
+
+```toml
+[data]
+    name = "Your Name"
+    email = "your.email@example.com"
+    editor = "code"
+    
+[data.machine]
+    type = "personal"  # or "work"
+    
+[diff]
+    pager = "delta"
+```
+
+### 2. Add Your Own Dotfiles
+
+```bash
+# Add a file
+chezmoi add ~/.vimrc
+
+# Add a directory
+chezmoi add --recursive ~/.config/nvim
+
+# Add as template (for personalization)
+chezmoi add --template ~/.gitconfig
+```
+
+### 3. Create Scripts
+
+Scripts in `.chezmoiscripts` run automatically:
+
+- `run_once_*.sh` - Run only once
+- `run_onchange_*.sh` - Run when content changes
+- `run_before_*.sh` - Run before applying
+- `run_after_*.sh` - Run after applying
+
+## 🔧 Maintenance
+
+### Update Your Dotfiles
+
+```bash
+# Make changes
+chezmoi edit ~/.zshrc
+
+# Review changes
+chezmoi diff
+
+# Apply changes
+chezmoi apply
+
+# Commit to repository
+chezmoi cd
+git add .
+git commit -m "Update zshrc"
+git push
+```
+
+### Sync Across Machines
+
+```bash
+# On machine A (after making changes)
+chezmoi cd
+git add . && git commit -m "Update" && git push
+
+# On machine B
+chezmoi update  # Pulls and applies changes
+```
+
+## 📚 Project Structure
 
 ```
-dotfiles
-├── dotfiles/
-│   ├── .config/
+.
+├── .chezmoiignore              # Files to ignore
+├── .chezmoiremove              # Files to remove
+├── .chezmoiversion             # Required chezmoi version
+├── .chezmoi.toml.tmpl          # Chezmoi configuration template
+│
+├── home/                       # Managed by chezmoi
+│   ├── dot_zshrc.tmpl         # ~/.zshrc (templated)
+│   ├── dot_gitconfig.tmpl     # ~/.gitconfig (templated)
+│   ├── dot_p10k.zsh           # ~/.p10k.zsh
+│   ├── dot_config/
 │   │   └── zellij/
-│   │       ├── config.kdl          # Zellij configuration
+│   │       ├── config.kdl
 │   │       └── themes/
-│   │           └── custom-dark.kdl # Custom Zellij theme
-│   ├── bin/
-│   │   └── zellij                 # Zellij binary executable
-│   ├── .gitconfig       # Git configurations
-│   ├── .zshrc           # Zsh shell configurations and Oh My Zsh setup
-│   └── .p10k.zsh        # Powerlevel10k prompt configuration
-├── scripts/
-│   └── install.sh       # Installation script for dotfiles
-└── README.md            # Project documentation
+│   └── dot_local/
+│       └── bin/
+│           └── executable_zellij
+│
+├── .chezmoiscripts/           # Installation scripts
+│   ├── run_once_before_install-packages.sh
+│   ├── run_once_install-oh-my-zsh.sh
+│   ├── run_once_install-zsh-plugins.sh
+│   └── run_after_setup-shell.sh
+│
+├── docs/                      # Documentation
+│   ├── CONFIGURATION.md
+│   ├── TROUBLESHOOTING.md
+│   └── MIGRATION.md
+│
+└── README.md                  # This file
 ```
 
-## Installation
+## 🐛 Troubleshooting
 
-To set up your environment with the provided dotfiles, follow these steps:
+### Reset Everything
 
-1. Clone this repository to your Codespace:
-   ```
-   git clone https://github.com/yourusername/dotfiles.git
-   cd dotfiles
-   ```
+```bash
+chezmoi state reset
+chezmoi apply -v
+```
 
-2. Run the installation script (installs required packages, Oh My Zsh, sets Zsh as default shell, and copies the dotfiles):
-   ```
-   bash scripts/install.sh
-   ```
+### Dry Run
 
-3. Configure Git (optional but recommended):
-   ```
-   git config --global user.name "Your Name"
-   git config --global user.email "your.email@example.com"
-   ```
+```bash
+chezmoi apply --dry-run --verbose
+```
 
-## Dotfiles Overview
+### Debug Mode
 
-- **bin/zellij**: Zellij terminal multiplexer binary (x86_64)
-- **.config/zellij/config.kdl**: Zellij terminal multiplexer configuration with custom keybindings and layout
-- **.config/zellij/themes/custom-dark.kdl**: Custom dark theme for Zellij
+```bash
+chezmoi --verbose apply
+```
+
+See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for common issues.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Test on a clean environment
+4. Submit a pull request
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE) for details.
+
+## 🔗 Resources
+
+- [Chezmoi Documentation](https://www.chezmoi.io/)
+- [Chezmoi How-To Guide](https://www.chezmoi.io/user-guide/command-overview/)
+- [Template Documentation](https://www.chezmoi.io/user-guide/templating/)
+- [My Blog Post on Dotfiles](https://github.com/Satcomx00-x00/dotfiles/wiki)
+
+## ⭐ Inspiration
+
+This dotfiles setup is inspired by best practices from:
+- [chezmoi.io](https://www.chezmoi.io/)
+- [Dotfiles community](https://dotfiles.github.io/)
+- Various GitHub dotfiles repositories
 - **.gitconfig**: User-specific configurations for Git, such as user information and preferred settings. **Note**: Update the user name and email placeholders with your actual details.
 - **.zshrc**: User-specific configurations for the Zsh shell, including Oh My Zsh initialization and aliases.
 - **.p10k.zsh**: Configuration file for Powerlevel10k, a theme for Zsh.

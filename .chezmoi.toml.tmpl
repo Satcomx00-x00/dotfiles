@@ -1,0 +1,17 @@
+{{- $name := promptStringOnce . "name" "What is your full name" -}}
+{{- $email := promptStringOnce . "email" "What is your email address" -}}
+{{- $editor := promptStringOnce . "editor" "What is your preferred editor (code/vim/nano)" -}}
+{{- $gpgSign := promptBoolOnce . "gpgSign" "Enable GPG commit signing" -}}
+
+[data]
+    name = {{ $name | quote }}
+    email = {{ $email | quote }}
+    editor = {{ $editor | quote }}
+    gpgSign = {{ $gpgSign }}
+
+[diff]
+    pager = "delta"
+
+[merge]
+    command = "nvim"
+    args = ["-d"]

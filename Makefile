@@ -1,0 +1,94 @@
+.PHONY: help install update status diff apply clean test
+
+# Default target
+help:
+	@echo "Dotfiles Makefile Commands:"
+	@echo ""
+	@echo "  make install    - Install dotfiles using chezmoi"
+	@echo "  make update     - Update dotfiles from repository"
+	@echo "  make status     - Show chezmoi status"
+	@echo "  make diff       - Show differences between current and source"
+	@echo "  make apply      - Apply pending changes"
+	@echo "  make clean      - Remove chezmoi state (careful!)"
+	@echo "  make test       - Test installation in Docker"
+	@echo "  make validate   - Validate templates"
+	@echo "  make doctor     - Run chezmoi doctor"
+	@echo ""
+
+# Install dotfiles
+install:
+	@echo "Installing chezmoi..."
+	@sh -c "$$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin
+	@echo "Initializing dotfiles..."
+	@~/.local/bin/chezmoi init --apply
+
+# Update from repository
+update:
+	@chezmoi update -v
+
+# Show status
+status:
+	@chezmoi status
+
+# Show differences
+diff:
+	@chezmoi diff
+
+# Apply changes
+apply:
+	@chezmoi apply -v
+
+# Clean state
+clean:
+	@echo "⚠️  This will reset chezmoi state. Continue? [y/N]"
+	@read -r response && [ "$$response" = "y" ] || exit 1
+	@chezmoi state reset
+	@echo "State reset complete"
+
+# Test in Docker containers
+test:
+	@echo "Testing on Ubuntu 22.04..."
+	@docker run --rm -v "$$(pwd):/dotfiles" ubuntu:22.04 bash -c "\
+		apt-get update -qq && \
+		apt-get install -y curl git && \
+		sh -c \"\$$(curl -fsLS https://get.chezmoi.io)\" -- --bin-dir /usr/local/bin && \
+		chezmoi init --dry-run --verbose /dotfiles && \
+		echo '✅ Ubuntu 22.04 test passed'"
+	@echo ""
+	@echo "Testing on Alpine..."
+	@docker run --rm -v "$$(pwd):/dotfiles" alpine:latest sh -c "\
+		apk add --no-cache curl git bash && \
+		sh -c \"\$$(curl -fsLS https://get.chezmoi.io)\" -- --bin-dir /usr/local/bin && \
+		chezmoi init --dry-run --verbose /dotfiles && \
+		echo '✅ Alpine test passed'"
+
+# Validate templates
+validate:
+	@echo "Validating templates..."
+	@mkdir -p ~/.config/chezmoi
+	@if [ ! -f ~/.config/chezmoi/chezmoi.toml ]; then \
+		echo '[data]' > ~/.config/chezmoi/chezmoi.toml; \
+		echo '  name = "Test User"' >> ~/.config/chezmoi/chezmoi.toml; \
+		echo '  email = "test@example.com"' >> ~/.config/chezmoi/chezmoi.toml; \
+		echo '  editor = "vim"' >> ~/.config/chezmoi/chezmoi.toml; \
+		echo '  gpgSign = false' >> ~/.config/chezmoi/chezmoi.toml; \
+	fi
+	@for template in $$(find home -name "*.tmpl"); do \
+		echo "Validating: $$template"; \
+		chezmoi execute-template < "$$template" > /dev/null || exit 1; \
+	done
+	@echo "✅ All templates valid"
+
+# Run chezmoi doctor
+doctor:
+	@chezmoi doctor
+
+# Check shell scripts with shellcheck
+shellcheck:
+	@if command -v shellcheck >/dev/null 2>&1; then \
+		echo "Running shellcheck..."; \
+		find .chezmoiscripts -name "*.sh" -exec shellcheck {} \; ; \
+		echo "✅ Shellcheck complete"; \
+	else \
+		echo "⚠️  shellcheck not installed"; \
+	fi
