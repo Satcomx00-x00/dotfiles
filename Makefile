@@ -6,6 +6,7 @@ help:
 	@echo ""
 	@echo "  make install    - Install dotfiles using chezmoi"
 	@echo "  make update     - Update dotfiles from repository"
+	@echo "  make reinit     - Reinitialize from local directory (for development)"
 	@echo "  make status     - Show chezmoi status"
 	@echo "  make diff       - Show differences between current and source"
 	@echo "  make apply      - Apply pending changes"
@@ -25,6 +26,12 @@ install:
 # Update from repository
 update:
 	@chezmoi update -v
+
+# Reinitialize from local directory (for development)
+reinit:
+	@echo "Reinitializing chezmoi from local directory..."
+	@chezmoi init --apply --source=$$(pwd)
+	@echo "✅ Reinitialized and applied."
 
 # Show status
 status:

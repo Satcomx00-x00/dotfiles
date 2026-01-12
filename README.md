@@ -21,6 +21,14 @@ A state-of-the-art dotfiles repository managed by [chezmoi](https://www.chezmoi.
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply Satcomx00-x00/dotfiles
 ```
 
+**Note**: On first run, if you see template errors, run `chezmoi init` first to configure your personal data, then apply:
+
+```bash
+chezmoi init Satcomx00-x00/dotfiles
+# Answer the prompts for name, email, editor, etc.
+chezmoi apply -v
+```
+
 Or if you already have chezmoi installed:
 
 ```bash

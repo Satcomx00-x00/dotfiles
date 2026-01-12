@@ -1,12 +1,16 @@
 # Managed by chezmoi - https://www.chezmoi.io/
-{{- /* Template variables are filled from ~/.config/chezmoi/chezmoi.toml */ -}}
 
 [user]
+{{- if hasKey . "data" }}
     name = {{ .data.name | quote }}
     email = {{ .data.email | quote }}
+{{- else }}
+    name = "Satcomx00"
+    email = "satcomx00@nonex.com"
+{{- end }}
 
 [core]
-{{- if .data.editor }}
+{{- if and (hasKey . "data") .data.editor }}
     editor = {{ .data.editor }}
 {{- else }}
     editor = code --wait
@@ -20,7 +24,7 @@
 [init]
     defaultBranch = main
 
-{{- if .data.gpgSign }}
+{{- if and (hasKey . "data") .data.gpgSign }}
 [commit]
     gpgsign = true
     

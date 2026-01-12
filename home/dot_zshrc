@@ -199,39 +199,7 @@ mkcd() {
     mkdir -p "$1" && cd "$1"
 }
 
-# Smart tmux session management
-tmux-smart() {
-    if tmux list-sessions &>/dev/null; then
-        echo -e "\e[36mExisting tmux sessions:\e[0m"
-        tmux list-sessions
-        echo
-        read -p "Attach to session (or press Enter for new): " session
-        if [[ -n "$session" ]]; then
-            tmux attach -t "$session" 2>/dev/null || echo -e "\e[31mSession '$session' not found.\e[0m"
-        else
-            tmux new-session
-        fi
-    else
-        echo -e "\e[33mNo existing sessions. Creating new session...\e[0m"
-        tmux new-session
-    fi
-}
 
-# Smart tmux starter function
-tmux-start() {
-    if [[ -n "$TMUX" ]]; then
-        echo -e "\e[33mAlready inside tmux session.\e[0m"
-        return 1
-    fi
-    
-    if tmux has-session -t main 2>/dev/null; then
-        echo -e "\e[36mAttaching to existing 'main' session...\e[0m"
-        tmux attach -t main
-    else
-        echo -e "\e[36mCreating new 'main' session...\e[0m"
-        tmux new-session -s main
-    fi
-}
 
 extract() {
     if [[ -f "$1" ]]; then
@@ -352,8 +320,6 @@ Available commands and functions:
   - reload: Reload the shell
   - update-zshrc: Update the .zshrc file
   - mkcd <dir>: Create directory and cd into it
-  - tmux-smart: Interactive tmux session manager
-  - tmux-start: Smart tmux starter
   - extract <file>: Extract archives
   - banner: Display system information banner
   - help: This help output
