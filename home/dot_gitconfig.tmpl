@@ -2,12 +2,12 @@
 {{- /* Template variables are filled from ~/.config/chezmoi/chezmoi.toml */ -}}
 
 [user]
-    name = {{ .name | quote }}
-    email = {{ .email | quote }}
+    name = {{ .data.name | quote }}
+    email = {{ .data.email | quote }}
 
 [core]
-{{- if .editor }}
-    editor = {{ .editor }}
+{{- if .data.editor }}
+    editor = {{ .data.editor }}
 {{- else }}
     editor = code --wait
 {{- end }}
@@ -20,7 +20,7 @@
 [init]
     defaultBranch = main
 
-{{- if .gpgSign }}
+{{- if .data.gpgSign }}
 [commit]
     gpgsign = true
     

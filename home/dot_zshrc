@@ -1,4 +1,3 @@
-
 # zellij auto start on zsh shell openning
 if [[ -z "$ZELLIJ" ]]; then
     if [[ "$ZELLIJ_AUTO_ATTACH" == "true" ]]; then
@@ -289,7 +288,6 @@ plugins=(
     # Docker
     docker
     docker-compose
-    docker-machine
 
     # Kubernetes
     kubectl
@@ -404,12 +402,6 @@ EOF
 # --- Awesome Terminal Banner ---
 banner() {
     echo -e "\e[1;36m"
-    echo "  _____       _                      ";
-    echo " / ____|     | |                     ";
-    echo "| (___   __ _| |_ ___ ___  _ __ ___  ";
-    echo " \___ \ / _\` | __/ __/ _ \| '_ \` _ \ ";
-    echo " ____) | (_| | || (_| (_) | | | | | |";
-    echo "|_____/ \__,_|\__\___\___/|_| |_| |_|";
     echo -e "\e[0m"
     echo -e "\e[1;32mWelcome to CustomShell!\e[0m"
     echo ""
