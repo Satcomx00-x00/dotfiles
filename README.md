@@ -39,7 +39,7 @@ chezmoi init --apply Satcomx00-x00/dotfiles
 
 ```bash
 # 1. Install chezmoi
-curl -fsLS get.chezmoi.io | sh
+sh -c "$(curl -fsLS get.chezmoi.io)" -- -b $HOME/.local/bin
 
 # 2. Initialize with this repository
 chezmoi init Satcomx00-x00/dotfiles
