@@ -1,6 +1,6 @@
 {
-	"terminal.integrated.fontFamily": "'MesloLGS NF', 'FiraCode Nerd Font', 'JetBrainsMono Nerd Font', 'Hack Nerd Font', monospace",
-	"editor.fontFamily": "'MesloLGS NF', 'FiraCode Nerd Font', 'JetBrainsMono Nerd Font', 'Hack Nerd Font', 'Droid Sans Mono', monospace",
+	"terminal.integrated.fontFamily": "'MesloLGS NF', 'FiraCode Nerd Font', 'JetBrainsMono Nerd Font', 'Hack Nerd Font', 'Symbols Nerd Font', monospace",
+	"editor.fontFamily": "'MesloLGS NF', 'FiraCode Nerd Font', 'JetBrainsMono Nerd Font', 'Hack Nerd Font', 'Symbols Nerd Font', 'Droid Sans Mono', monospace",
 	"terminal.integrated.fontSize": 13,
 	"editor.fontSize": 13,
 	"terminal.integrated.fontWeight": "normal",
