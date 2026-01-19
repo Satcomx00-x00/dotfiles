@@ -158,7 +158,44 @@ main() {
     echo ""
     echo "Next steps:"
     echo "  1. Review the applied changes"
-    echo "  2. Edit configuration: chezmoi edit-config"
+    echo "  2. Setting zsh as default shell..."
+    
+    # Try to set zsh as default shell
+    if command_exists zsh; then
+        local zsh_path
+        zsh_path=$(command -v zsh)
+        
+        # Check if zsh is in /etc/shells
+        if ! grep -q "^${zsh_path}$" /etc/shells 2>/dev/null; then
+            if [ -w /etc/shells ]; then
+                echo "$zsh_path" | sudo tee -a /etc/shells > /dev/null
+                success "Added zsh to /etc/shells"
+            else
+                warning "Cannot add zsh to /etc/shells (no sudo access)"
+            fi
+        fi
+        
+        # Try to change default shell
+        if command_exists chsh; then
+            if chsh -s "$zsh_path" 2>/dev/null; then
+                success "Set zsh as default shell"
+                info "You may need to log out and back in for this to take effect"
+            else
+                warning "Could not set zsh as default shell (may require sudo)"
+                info "Your .bashrc will auto-switch to zsh instead"
+            fi
+        else
+            warning "chsh command not available"
+            info "Your .bashrc will auto-switch to zsh instead"
+        fi
+    else
+        warning "zsh not found. Please install it first:"
+        echo "  Ubuntu/Debian: sudo apt-get install zsh"
+        echo "  Fedora/RHEL:   sudo dnf install zsh"
+        echo "  macOS:         brew install zsh"
+    fi
+    
+    echo ""
     echo "  3. Start a new shell or run: exec zsh"
     echo ""
     echo "Useful commands:"

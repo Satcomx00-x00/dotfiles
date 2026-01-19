@@ -1,0 +1,11 @@
+# Auto-switch to zsh if available
+# This ensures zsh becomes the default shell experience
+if [ -n "$BASH_VERSION" ] && [ -z "$ZSH_SWITCHED" ]; then
+    # Check if zsh is installed
+    if command -v zsh >/dev/null 2>&1; then
+        # Prevent recursive switching
+        export ZSH_SWITCHED=1
+        # Switch to zsh
+        exec zsh
+    fi
+fi
