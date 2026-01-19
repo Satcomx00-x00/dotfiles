@@ -1,8 +1,8 @@
-// Custom Dark Theme for Zellij
-// Based on the default dark theme with customizations
+// xcad Theme for Zellij
+// Purple-blue gradient color scheme
 
 themes {
-    custom-dark {
+    xcad {
     fg 241 241 241
     bg 26 26 26
     black 18 18 18
