@@ -49,4 +49,14 @@ else
     echo "✅ fzf-tab already installed"
 fi
 
+# Install fzf (junegunn/fzf) for keybindings and completion
+if [ ! -d "$HOME/.fzf" ]; then
+    echo "Installing fzf..."
+    git clone --depth 1 https://github.com/junegunn/fzf.git "$HOME/.fzf"
+    # Install key bindings and completion for zsh without modifying user's rc files
+    "$HOME/.fzf/install" --key-bindings --completion --no-update-rc --no-fish || true
+else
+    echo "✅ fzf already installed"
+fi
+
 echo "✅ Zsh plugins installed successfully!"

@@ -44,6 +44,14 @@ if command -v apt-get >/dev/null 2>&1; then
         curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
     fi
 
+    # Debian/Ubuntu ships `bat` as `batcat` in some distros. Create a user-local wrapper so `bat` works.
+    if command -v batcat >/dev/null 2>&1 && ! command -v bat >/dev/null 2>&1; then
+        echo "Creating user-local wrapper for bat (batcat -> bat)"
+        mkdir -p "$HOME/.local/bin"
+        ln -sf "$(command -v batcat)" "$HOME/.local/bin/bat"
+        chmod +x "$HOME/.local/bin/bat"
+    fi
+
 elif command -v dnf >/dev/null 2>&1; then
     sudo dnf install -y zsh git curl wget ca-certificates gcc make unzip fzf ripgrep fd-find bat htop ncdu jq tree eza zoxide
 

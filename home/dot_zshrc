@@ -180,8 +180,8 @@ enhanced_tools_aliases() {
         alias l='ls -CF'
     fi
 
-    # Better cat if bat is available
-    set_alias_if_exists bat cat='bat'
+    # Better cat if bat is available (plain output, no pager) and provide `batc` for colored output
+    set_alias_if_exists bat "cat='bat --style=plain --paging=never'" "batc='bat --paging=never'"
 }
 
 # --- Setup Aliases ---
@@ -238,6 +238,11 @@ export PATH="$PATH:$HOME/.local/bin"
 export NVM_DIR="$HOME/.nvm"
 [[ -s "$NVM_DIR/nvm.sh" ]] && \. "$NVM_DIR/nvm.sh"
 [[ -s "$NVM_DIR/bash_completion" ]] && \. "$NVM_DIR/bash_completion"
+
+# zoxide (smart cd). Initialize if available to enable `z` command and completions
+if command -v zoxide >/dev/null 2>&1; then
+    eval "$(zoxide init zsh)"
+fi
 
 # Python virtual environment
 export WORKON_HOME="$HOME/.virtualenvs"
@@ -298,6 +303,10 @@ plugins=(
     z
     jump
     wd
+
+    # Fuzzy finders
+    fzf
+    fzf-tab
 )
 
 # --- Welcome Message ---
