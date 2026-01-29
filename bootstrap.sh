@@ -53,25 +53,20 @@ detect_os() {
     fi
 }
 
-# Install chezmoi
-install_chezmoi() {
-    if command_exists chezmoi; then
-        success "chezmoi already installed at $(command -v chezmoi)"
-        return 0
-    fi
-
-    info "Installing chezmoi..."
-    
-    if command_exists curl; then
-        sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "${HOME}/.local/bin"
-    elif command_exists wget; then
-        sh -c "$(wget -qO- get.chezmoi.io)" -- -b "${HOME}/.local/bin"
+# Install Powerlevel10k theme
+install_powerlevel10k() {
+    if [ -d "${HOME}/.oh-my-zsh" ]; then
+        local p10k_dir="${ZSH_CUSTOM:-${HOME}/.oh-my-zsh/custom}/themes/powerlevel10k"
+        if [ ! -d "$p10k_dir" ]; then
+            info "Installing Powerlevel10k theme..."
+            git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$p10k_dir"
+            success "Powerlevel10k installed"
+        else
+            success "Powerlevel10k already installed"
+        fi
     else
-        error "Neither curl nor wget found. Please install one of them."
-        return 1
+        warning "Oh My Zsh not found. Skipping Powerlevel10k installation."
     fi
-
-    success "chezmoi installed successfully"
 }
 
 # Install prerequisites
@@ -152,6 +147,9 @@ main() {
     else
         "${CHEZMOI_BIN}" init --apply "$REPO_URL"
     fi
+
+    # Install Powerlevel10k
+    install_powerlevel10k
 
     echo ""
     success "✨ Dotfiles installation complete!"
