@@ -250,6 +250,7 @@ export VIRTUALENVWRAPPER_PYTHON="/usr/bin/python3"
 [[ -f "/usr/local/bin/virtualenvwrapper.sh" ]] && source "/usr/local/bin/virtualenvwrapper.sh"
 
 # --- Plugin Configs ---
+export FZF_BASE=$HOME/.fzf
 plugins=(
     # Essential Zsh plugins
     colored-man-pages
