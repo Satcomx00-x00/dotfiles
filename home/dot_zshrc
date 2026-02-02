@@ -26,7 +26,7 @@ export PATH="/usr/bin:$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 export BROWSER="firefox"
-export NODE_OPTIONS="--max-old-space-size=16384 --max-semi-space-size=64 --optimize-for-size=false"
+export NODE_OPTIONS="--max-old-space-size=16384 --max-semi-space-size=64"
 
 
 # --- Key Bindings ---
@@ -181,7 +181,9 @@ enhanced_tools_aliases() {
     fi
 
     # Better cat if bat is available (plain output, no pager) and provide `batc` for colored output
-    set_alias_if_exists bat "cat='bat --style=plain --paging=never'" "batc='bat --paging=never'"
+    if command -v bat &> /dev/null; then
+        alias cat='bat --style=plain --paging=never --color=always'
+    fi
 }
 
 # --- Setup Aliases ---
