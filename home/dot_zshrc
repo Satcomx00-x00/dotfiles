@@ -439,6 +439,19 @@ get_distro_name() {
     fi
 }
 
+# Kill process on a specific port
+killport() {
+    if [ -z "$1" ]; then
+        echo "Usage: killport <port>"
+        return 1
+    fi
+    # -t: terse output (PID only)
+    # -i: select by internet address
+    # xargs -r: run only if input is not empty
+    lsof -ti:"$1" | xargs -r kill -9
+}
+
+
 # Show banner on interactive shells only
 if [[ -n "$PS1" || -n "$ZSH_NAME" || -n "$ZSH_VERSION" ]]; then
     # Avoid printing during non-interactive runs
