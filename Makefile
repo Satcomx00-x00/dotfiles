@@ -1,4 +1,4 @@
-.PHONY: help install install-scripts update status diff apply clean test validate doctor shellcheck
+.PHONY: help install install-scripts update status diff apply clean test validate doctor shellcheck container-build container-run container-shell
 
 # Default target
 help:
@@ -13,6 +13,9 @@ help:
 	@echo "  make apply          - Apply pending changes"
 	@echo "  make clean          - Remove chezmoi state (careful!)"
 	@echo "  make test           - Test installation in Docker"
+	@echo "  make container-build - Build the development container with k9s"
+	@echo "  make container-run  - Run the development container"
+	@echo "  make container-shell - Open a shell in the development container"
 	@echo "  make validate       - Validate templates"
 	@echo "  make doctor         - Run chezmoi doctor"
 	@echo "  make shellcheck     - Check shell scripts with shellcheck"
@@ -108,5 +111,23 @@ install-scripts:
 	@for script in $$(find .chezmoiscripts -name "*.sh"); do \
 		echo "Running $$script"; \
 		chezmoi execute-template < "$$script" | bash; \
+	done
+	@echo "✅ Scripts installed"
+
+# Build the development container with k9s
+container-build:
+	@echo "Building development container with k9s..."
+	@docker build -f Containerfile -t dotfiles-dev:latest .
+	@echo "✅ Container built successfully"
+
+# Run the development container
+container-run:
+	@echo "Running development container..."
+	@docker run --rm -it dotfiles-dev:latest
+
+# Open a shell in the development container
+container-shell:
+	@echo "Opening shell in development container..."
+	@docker run --rm -it dotfiles-dev:latest /bin/bash
 	done
 	@echo "✅ Scripts installed"

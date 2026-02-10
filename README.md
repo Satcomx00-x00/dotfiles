@@ -243,6 +243,38 @@ git add . && git commit -m "Update" && git push
 chezmoi update  # Pulls and applies changes
 ```
 
+## 🐳 Development Container
+
+A Containerfile is provided for development and testing with k9s and other tools pre-installed.
+
+### Build the Container
+
+```bash
+make container-build
+# Or manually:
+docker build -f Containerfile -t dotfiles-dev:latest .
+```
+
+### Run the Container
+
+```bash
+make container-shell
+# Or manually:
+docker run --rm -it dotfiles-dev:latest /bin/bash
+```
+
+### What's Included
+
+- Ubuntu 22.04 base image
+- k9s (Kubernetes CLI) v0.32.4
+- curl, git, wget
+- All dotfiles from this repository
+
+The container is perfect for:
+- Testing dotfiles changes in a clean environment
+- Kubernetes cluster management with k9s
+- Development without polluting your local system
+
 ## 📚 Project Structure
 
 ```
