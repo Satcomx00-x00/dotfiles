@@ -13,8 +13,8 @@ help:
 	@echo "  make apply          - Apply pending changes"
 	@echo "  make clean          - Remove chezmoi state (careful!)"
 	@echo "  make test           - Test installation in Docker"
-	@echo "  make container-build - Build the development container with k9s"
-	@echo "  make container-shell - Open a shell in the development container"
+	@echo "  make container-build - Build the development container with all tools pre-installed"
+	@echo "  make container-shell - Open a zsh shell in the development container"
 	@echo "  make validate       - Validate templates"
 	@echo "  make doctor         - Run chezmoi doctor"
 	@echo "  make shellcheck     - Check shell scripts with shellcheck"
@@ -115,11 +115,11 @@ install-scripts:
 
 # Build the development container with k9s
 container-build:
-	@echo "Building development container with k9s..."
+	@echo "Building development container with all tools pre-installed..."
 	@docker build -f Containerfile -t dotfiles-dev:latest .
 	@echo "✅ Container built successfully"
 
 # Open a shell in the development container
 container-shell:
-	@echo "Opening shell in development container..."
-	@docker run --rm -it dotfiles-dev:latest /bin/bash
+	@echo "Opening zsh shell in development container..."
+	@docker run --rm -it dotfiles-dev:latest /bin/zsh

@@ -245,7 +245,7 @@ chezmoi update  # Pulls and applies changes
 
 ## 🐳 Development Container
 
-A Containerfile is provided for development and testing with k9s and other tools pre-installed.
+A Containerfile is provided for development and testing with **all tools pre-installed**. This container includes the complete shell environment with all packages, plugins, and configurations ready to use.
 
 ### Build the Container
 
@@ -260,14 +260,35 @@ docker build -f Containerfile -t dotfiles-dev:latest .
 ```bash
 make container-shell
 # Or manually:
-docker run --rm -it dotfiles-dev:latest /bin/bash
+docker run --rm -it dotfiles-dev:latest /bin/zsh
 ```
 
 ### What's Included
 
+The container has everything from the chezmoi scripts pre-installed:
+
+**Shell & Tools:**
 - Ubuntu 22.04 base image
+- Zsh with Oh My Zsh framework
+- Powerlevel10k theme
+- All essential packages (git, curl, wget, build-essential, etc.)
+
+**Modern CLI Tools:**
 - k9s (Kubernetes CLI) v0.32.4
-- curl, git, wget
+- fzf (fuzzy finder)
+- ripgrep, fd-find
+- bat (cat alternative)
+- eza (ls alternative)
+- zoxide (smart cd)
+- htop, ncdu, jq, tree
+
+**Zsh Plugins:**
+- zsh-autosuggestions
+- zsh-syntax-highlighting
+- zsh-completions
+- fzf-tab
+
+**Note:** Unlike local installation where chezmoi scripts run during `apply`, the container has all tools pre-installed at build time for faster startup and testing.
 - All dotfiles from this repository
 
 The container is perfect for:
