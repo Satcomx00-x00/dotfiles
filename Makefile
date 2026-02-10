@@ -129,5 +129,3 @@ container-run:
 container-shell:
 	@echo "Opening shell in development container..."
 	@docker run --rm -it dotfiles-dev:latest /bin/bash
-	done
-	@echo "✅ Scripts installed"

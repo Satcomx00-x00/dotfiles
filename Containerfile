@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install k9s
 # Install k9s - Kubernetes CLI To Manage Your Clusters In Style!
 RUN ARCH="$(uname -m)" && \
     if [ "$ARCH" = "x86_64" ]; then K9S_ARCH="amd64"; \
