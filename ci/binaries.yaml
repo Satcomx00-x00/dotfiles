@@ -19,8 +19,9 @@
 github:
   fd: sharkdp/fd|fd-v[0-9.]+-{ARCH}-unknown-linux-musl\.tar\.gz|fd
   zellij: zellij-org/zellij|zellij-{ARCH}-unknown-linux-musl\.tar\.gz|zellij
-  bob: MordechaiHadad/bob|bob-linux-{ARCH}-musl\.zip|bob
-  ripgrep: BurntSushi/ripgrep|ripgrep-[0-9.]+-{ARCH}-unknown-linux-musl\.tar\.gz|rg
+  bob: MordechaiHadad/bob|bob-linux-{ARCH}\.zip|bob
+  rg: BurntSushi/ripgrep|ripgrep-[0-9.]+-{ARCH}-unknown-linux-musl\.tar\.gz|rg
+  kyverno: kyverno/kyverno|kyverno-cli_v[0-9.]+_linux_{ARCH}\.tar\.gz|kyverno
 
 apt:
   bat: bat
@@ -43,16 +44,15 @@ go:
   helm-docs: github.com/norwoodj/helm-docs/cmd/helm-docs@latest
   kopia: github.com/kopia/kopia@latest
   kubectl-explore: github.com/keisku/kubectl-explore@latest
-  kubectl-kyverno: github.com/kyverno/kyverno/cmd/cli/kubectl-kyverno@latest
-  kubectl-tree: github.com/ahmetb/kubectl-tree@latest
+  kubectl-tree: github.com/ahmetb/kubectl-tree/cmd/kubectl-tree@latest
   kubectx: github.com/ahmetb/kubectx/cmd/kubectx@latest
   kubens: github.com/ahmetb/kubectx/cmd/kubens@latest
   crane: github.com/google/go-containerregistry/cmd/crane@latest       # OCI registry tool (Harbor)
   kubecolor: github.com/kubecolor/kubecolor@latest                     # colorized kubectl
   stern: github.com/stern/stern@latest                                 # multi-pod log tailing
-  vals: github.com/helmfile/vals@latest                                # secrets interpolation
+  vals: github.com/helmfile/vals/cmd/vals@latest                       # secrets interpolation
   helmfile: github.com/helmfile/helmfile@latest                        # declarative helm releases
-  kubeconform: github.com/yannh/kubeconform@latest                     # K8s manifest validation
+  kubeconform: github.com/yannh/kubeconform/cmd/kubeconform@latest     # K8s manifest validation
 
 npm:
   bun: bun

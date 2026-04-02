@@ -79,46 +79,47 @@ jobs:
             command -v "$bin" >/dev/null 2>&1 && echo "$(command -v "$bin"): $($bin --version 2>&1 | head -1)" || true
           done
 
-  # ── Go ──────────────────────────────────────────────────────────────────────
+  # ── Go — one matrix entry per tool, all compiled in parallel ─────────────────
   test-go:
-    name: "Go"
+    name: "Go — ${{ matrix.tool }}"
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { tool: helm-docs,       module: "github.com/norwoodj/helm-docs/cmd/helm-docs@latest" }
+          - { tool: kopia,           module: "github.com/kopia/kopia@latest" }
+          - { tool: kubectl-explore, module: "github.com/keisku/kubectl-explore@latest" }
+          - { tool: kubectl-tree,    module: "github.com/ahmetb/kubectl-tree/cmd/kubectl-tree@latest" }
+          - { tool: kubectx,         module: "github.com/ahmetb/kubectx/cmd/kubectx@latest" }
+          - { tool: kubens,          module: "github.com/ahmetb/kubectx/cmd/kubens@latest" }
+          - { tool: crane,           module: "github.com/google/go-containerregistry/cmd/crane@latest" }
+          - { tool: kubecolor,       module: "github.com/kubecolor/kubecolor@latest" }
+          - { tool: stern,           module: "github.com/stern/stern@latest" }
+          - { tool: vals,            module: "github.com/helmfile/vals/cmd/vals@latest" }
+          - { tool: helmfile,        module: "github.com/helmfile/helmfile@latest" }
+          - { tool: kubeconform,     module: "github.com/yannh/kubeconform/cmd/kubeconform@latest" }
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-          cache: true
+          cache: false
 
-      - name: Run installer — go provider
-        # go install puts binaries in $GOPATH/bin which actions/setup-go adds to PATH
-        run: bash ci/install-binaries.sh --managers=go
-
-      - name: Verify go binaries
+      - name: Install ${{ matrix.tool }}
         run: |
-          check() {
-            local bin="$1"
-            if command -v "$bin" >/dev/null 2>&1; then
-              echo "✔  $bin  ($(command -v "$bin"))"
-            else
-              echo "✘  $bin  MISSING" >&2
-              return 1
-            fi
-          }
-          check helm-docs
-          check kopia
-          check kubectl-explore
-          check kubectl-kyverno
-          check kubectl-tree
-          check kubectx
-          check kubens
-          check crane
-          check kubecolor
-          check stern
-          check vals
-          check helmfile
-          check kubeconform
+          echo "▶ go install ${{ matrix.module }}"
+          go install ${{ matrix.module }}
+
+      - name: Verify ${{ matrix.tool }}
+        run: |
+          if command -v "${{ matrix.tool }}" >/dev/null 2>&1; then
+            echo "✔  ${{ matrix.tool }}  ($(command -v '${{ matrix.tool }}'))"
+          else
+            echo "✘  ${{ matrix.tool }}  MISSING" >&2
+            exit 1
+          fi
 
   # ── GitHub Releases (fd · zellij · bob · ripgrep) ────────────────────────────
   test-github:
@@ -152,12 +153,13 @@ jobs:
           check fd
           check zellij
           check bob
-          check rg          # ripgrep installs as 'rg'
+          check rg          # ripgrep
+          check kyverno     # kyverno CLI (downloaded from github releases)
 
       - name: Show versions
         if: always()
         run: |
-          for bin in fd zellij bob rg; do
+          for bin in fd zellij bob rg kyverno; do
             command -v "$bin" >/dev/null 2>&1 && echo "$(command -v "$bin"): $($bin --version 2>&1 | head -1)" || true
           done
 

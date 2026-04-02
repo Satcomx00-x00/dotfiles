@@ -54,7 +54,7 @@ COPY ci/ /ci/
 # ── Run the binary installer ──────────────────────────────────────────────────
 # Installs: bat, btop, eza, fzf, helm, htop, k9s, terraform, zoxide, age, jq, yq, direnv, mkcert, sops (apt/direct)
 #           helm-docs, kopia, kubectx, kubens, kubecolor, stern, helmfile, … (go)
-#           fd, zellij, bob, ripgrep (github releases — pre-built musl binaries)
+#           fd, zellij, bob, rg, kyverno (github releases — pre-built musl/official binaries)
 #           pipreqs, ruff, uv (pip)
 #           bun (bun/npm)
 RUN chmod +x /ci/install-binaries.sh && \
@@ -103,6 +103,7 @@ RUN zsh --version && \
     rg --version && \
     bob --version && \
     zellij --version && \
+    kyverno version && \
     zoxide --version && \
     kubectx --version && \
     terraform version && \
