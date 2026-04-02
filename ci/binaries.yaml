@@ -7,16 +7,20 @@
 #
 # Providers handled by install-binaries.sh:
 #   apt    — apt-get install (special repos auto-configured where needed)
+#   github — pre-built binary downloaded from GitHub Releases
+#              value format: owner/repo|asset-regex|archive-entry
+#              {ARCH} in the pattern is replaced with uname -m (x86_64 / aarch64)
+#              archive-entry is the binary name inside a .tar.gz/.zip archive;
+#              omit (or use an empty third field) if the asset is a plain binary
 #   go     — go install <module>
-#   cargo  — cargo install <crate>
 #   pip    — pip install <package>
 #   npm    — installed via bun add -g (bun is used instead of npm)
 
-cargo:
-  fd: fd-find
-  zellij: zellij
-  bob: bob-nvim           # neovim version manager
-  ripgrep: ripgrep        # rg, faster grep
+github:
+  fd: sharkdp/fd|fd-v[0-9.]+-{ARCH}-unknown-linux-musl\.tar\.gz|fd
+  zellij: zellij-org/zellij|zellij-{ARCH}-unknown-linux-musl\.tar\.gz|zellij
+  bob: MordechaiHadad/bob|bob-linux-{ARCH}-musl\.zip|bob
+  ripgrep: BurntSushi/ripgrep|ripgrep-[0-9.]+-{ARCH}-unknown-linux-musl\.tar\.gz|rg
 
 apt:
   bat: bat

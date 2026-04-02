@@ -44,15 +44,6 @@ RUN ARCH="$(uname -m)" && \
 ENV GOPATH=/go
 ENV PATH="${GOPATH}/bin:/usr/local/go/bin:${PATH}"
 
-# ── Rust / Cargo (required for the cargo provider) ────────────────────────────
-ENV RUSTUP_HOME=/usr/local/rustup \
-    CARGO_HOME=/usr/local/cargo
-RUN curl -fsSL https://sh.rustup.rs \
-    | sh -s -- -y --no-modify-path --profile minimal --default-toolchain stable && \
-    chmod -R a+w /usr/local/rustup /usr/local/cargo
-
-ENV PATH="/usr/local/cargo/bin:${PATH}"
-
 # ── Bun (used in place of npm — required for the npm/bun provider) ────────────
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:${PATH}"
@@ -63,16 +54,11 @@ COPY ci/ /ci/
 # ── Run the binary installer ──────────────────────────────────────────────────
 # Installs: bat, btop, eza, fzf, helm, htop, k9s, terraform, zoxide, age, jq, yq, direnv, mkcert, sops (apt/direct)
 #           helm-docs, kopia, kubectx, kubens, kubecolor, stern, helmfile, … (go)
-#           fd, zellij, bob, ripgrep (cargo)
+#           fd, zellij, bob, ripgrep (github releases — pre-built musl binaries)
 #           pipreqs, ruff, uv (pip)
 #           bun (bun/npm)
 RUN chmod +x /ci/install-binaries.sh && \
     /ci/install-binaries.sh && \
-    # Remove Rust toolchain after building binaries to slim the image
-    if ! rustup self uninstall -y; then \
-        echo "WARNING: rustup uninstall failed; residual toolchain files may remain" >&2; \
-    fi && \
-    rm -rf /usr/local/rustup /usr/local/cargo /root/.cargo && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Oh My Zsh (system-wide)
@@ -113,11 +99,14 @@ RUN zsh --version && \
     bat --version && \
     btop --version && \
     eza --version && \
+    fd --version && \
+    rg --version && \
+    bob --version && \
+    zellij --version && \
     zoxide --version && \
     kubectx --version && \
     terraform version && \
-    k9s version && \
-    zellij --version
+    k9s version
 
 # Default to zsh
 SHELL ["/bin/zsh", "-c"]

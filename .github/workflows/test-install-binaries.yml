@@ -120,25 +120,25 @@ jobs:
           check helmfile
           check kubeconform
 
-  # ── Cargo (Rust) ─────────────────────────────────────────────────────────────
-  test-cargo:
-    name: "Cargo (Rust)"
+  # ── GitHub Releases (fd · zellij · bob · ripgrep) ────────────────────────────
+  test-github:
+    name: "GitHub Releases (fd · zellij · bob · ripgrep)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Rust stable toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install system prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            curl python3 unzip
 
-      # Cache compiled artifacts — dramatically speeds up re-runs
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
+      - name: Run installer — github provider
+        run: sudo -E bash ci/install-binaries.sh --managers=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run installer — cargo provider
-        run: bash ci/install-binaries.sh --managers=cargo
-
-      - name: Verify cargo binaries
+      - name: Verify github binaries
         run: |
           check() {
             local bin="$1"
@@ -150,9 +150,16 @@ jobs:
             fi
           }
           check fd
-          check rg         # ripgrep installs as 'rg'
           check zellij
           check bob
+          check rg          # ripgrep installs as 'rg'
+
+      - name: Show versions
+        if: always()
+        run: |
+          for bin in fd zellij bob rg; do
+            command -v "$bin" >/dev/null 2>&1 && echo "$(command -v "$bin"): $($bin --version 2>&1 | head -1)" || true
+          done
 
   # ── Pip ──────────────────────────────────────────────────────────────────────
   test-pip:
@@ -164,7 +171,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
 
       - name: Run installer — pip provider
         run: bash ci/install-binaries.sh --managers=pip

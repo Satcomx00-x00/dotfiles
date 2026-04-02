@@ -35,7 +35,7 @@ REGISTRY="${REGISTRY:-${SCRIPT_DIR}/binaries.yaml}"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 DRY_RUN="${DRY_RUN:-false}"
 SKIP_EXISTING="${SKIP_EXISTING:-true}"
-ACTIVE_MANAGERS="${MANAGERS:-apt,go,cargo,pip,bun}"
+ACTIVE_MANAGERS="${MANAGERS:-apt,go,github,pip,bun}"
 ONLY_BINARIES="${ONLY_BINARIES:-}"
 MAX_RETRIES=3
 
@@ -101,6 +101,11 @@ detect_arch() {
     armv7l)  echo "arm" ;;
     *)       uname -m ;;
   esac
+}
+
+# Returns the raw machine name used in Rust/musl release asset names (x86_64 / aarch64)
+detect_arch_rust() {
+  uname -m
 }
 
 # ─── Direct GitHub release binary installer ──────────────────────────────────
@@ -235,6 +240,42 @@ with open(registry) as fh:
             value = re.sub(r'\s*#.*$', '', m.group(2)).strip()
             print(f"{key} {value}")
 PYEOF
+}
+
+# ─── Provider: github releases ───────────────────────────────────────────────
+# Reads the "github" section from binaries.yaml.
+# Each entry value has the form:  owner/repo|asset-regex|[archive-entry]
+#   owner/repo    — GitHub repository
+#   asset-regex   — Python re.search pattern matched against release asset name;
+#                   {ARCH} is substituted with the raw uname -m value (x86_64/aarch64)
+#   archive-entry — (optional) binary name inside a .tar.gz/.zip archive;
+#                   omit when the downloaded asset is itself the binary
+install_github() {
+  log_section "GitHub Releases"
+
+  local arch
+  arch="$(detect_arch_rust)"
+
+  while read -r binary spec; do
+    [[ -z "$binary" ]] && continue
+    is_binary_wanted "$binary" || continue
+
+    if [[ "$SKIP_EXISTING" == "true" ]] && binary_exists "$binary"; then
+      log_skip "$binary (already installed)"
+      continue
+    fi
+
+    # Parse spec: owner/repo|asset-pattern|[archive-entry]
+    local repo pattern entry
+    IFS='|' read -r repo pattern entry <<< "$spec"
+
+    # Substitute {ARCH} placeholder with the actual machine arch
+    pattern="${pattern//\{ARCH\}/$arch}"
+
+    if ! install_github_binary "$binary" "$repo" "$pattern" "${entry:-}"; then
+      record_error "github: $binary ($repo)"
+    fi
+  done < <(parse_section "github")
 }
 
 # ─── APT: special repository setup ───────────────────────────────────────────
@@ -538,11 +579,12 @@ main() {
   log "InstallDir: $INSTALL_DIR"
   [[ -n "$ONLY_BINARIES" ]] && log "Filter    : $ONLY_BINARIES"
 
-  is_manager_active "apt"   && install_apt
-  is_manager_active "go"    && install_go
-  is_manager_active "cargo" && install_cargo
-  is_manager_active "pip"   && install_pip
-  is_manager_active "bun"   && install_bun
+  is_manager_active "apt"    && install_apt
+  is_manager_active "go"     && install_go
+  is_manager_active "github" && install_github
+  is_manager_active "cargo"  && install_cargo
+  is_manager_active "pip"    && install_pip
+  is_manager_active "bun"    && install_bun
 
   # ─── Summary ────────────────────────────────────────────────────────────────
   echo ""
