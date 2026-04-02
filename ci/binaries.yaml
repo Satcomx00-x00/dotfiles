@@ -16,31 +16,24 @@ cargo:
   fd: fd-find
   zellij: zellij
   bob: bob-nvim           # neovim version manager
-  delta: git-delta        # better git diffs
-  dust: du-dust           # disk usage
-  hyperfine: hyperfine    # benchmarking
   ripgrep: ripgrep        # rg, faster grep
-  tokei: tokei            # code stats/line counts
-  bottom: bottom          # btm, better htop
 
 apt:
   bat: bat
-  eza: eza                # modern ls replacement (eza community repo)
+  btop: btop
   fzf: fzf
   helm: helm              # Helm apt repo auto-configured
   htop: htop
-  k9s: k9s
-  terraform: terraform    # HashiCorp apt repo auto-configured
+  k9s: k9s               # direct GitHub download (not in standard Ubuntu repos)
   zoxide: zoxide
   age: age                # modern encryption (secrets)
   jq: jq                  # JSON processor
-  yq: yq                  # YAML processor
+  yq: yq                  # YAML processor — direct GitHub download (mikefarah/yq)
   direnv: direnv          # per-dir env vars
-  mkcert: mkcert          # local TLS certs
-  sops: sops              # secrets encryption (GitOps)
+  mkcert: mkcert          # local TLS certs — direct GitHub download (FiloSottile/mkcert)
+  sops: sops              # secrets encryption — direct GitHub download (getsops/sops)
 
 go:
-  flux: github.com/fluxcd/flux2/cmd/flux@latest
   helm-docs: github.com/norwoodj/helm-docs/cmd/helm-docs@latest
   kopia: github.com/kopia/kopia@latest
   kubectl-explore: github.com/keisku/kubectl-explore@latest
@@ -54,21 +47,11 @@ go:
   vals: github.com/helmfile/vals@latest                                # secrets interpolation
   helmfile: github.com/helmfile/helmfile@latest                        # declarative helm releases
   kubeconform: github.com/yannh/kubeconform@latest                     # K8s manifest validation
-  golangci-lint: github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-  syft: github.com/anchore/syft/cmd/syft@latest                       # SBOM gen
-  grype: github.com/anchore/grype/cmd/grype@latest                    # vuln scanner
 
 npm:
   bun: bun
-  opencode: opencode-ai
-  yarn: yarn
-  renovate: renovate      # dependency update automation
 
 pip:
   pipreqs: pipreqs
   ruff: ruff
   uv: uv
-  pre-commit: pre-commit  # git hooks framework
-  httpie: httpie          # hx, better curl
-  commitizen: commitizen  # conventional commits
-  detect-secrets: detect-secrets  # secret scanning

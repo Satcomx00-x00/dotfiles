@@ -111,12 +111,11 @@ RUN zsh --version && \
     git --version && \
     go version && \
     bat --version && \
-    eza --version && \
+    btop --version && \
     zoxide --version && \
     kubectx --version && \
-    terraform version && \
-    zellij --version && \
-    k9s version
+    k9s version && \
+    zellij --version
 
 # Default to zsh
 SHELL ["/bin/zsh", "-c"]

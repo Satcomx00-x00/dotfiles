@@ -1,0 +1,203 @@
+name: Test Install Binaries
+
+# Runs the install-binaries.sh script for every provider in parallel
+# and verifies each expected binary is accessible afterwards.
+# Triggered on any change to the ci/ directory or this workflow file.
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "ci/**"
+      - ".github/workflows/test-install-binaries.yml"
+  pull_request:
+    paths:
+      - "ci/**"
+      - ".github/workflows/test-install-binaries.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ${{ github.workspace }}/ci/binaries.yaml
+
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+
+  # ── apt + direct GitHub downloads (k9s, yq, mkcert, sops) ─────────────────
+  test-apt:
+    name: "apt  /  direct (k9s · yq · mkcert · sops)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            curl wget gpg ca-certificates python3 unzip
+
+      - name: Run installer — apt provider
+        run: sudo -E bash ci/install-binaries.sh --managers=apt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify apt binaries
+        run: |
+          check() {
+            local bin="$1"
+            if command -v "$bin" >/dev/null 2>&1; then
+              echo "✔  $bin  ($(command -v "$bin"))"
+            else
+              echo "✘  $bin  MISSING" >&2
+              return 1
+            fi
+          }
+          # Standard apt packages
+          check bat || check batcat   # Ubuntu ships bat as batcat
+          check btop
+          check fzf
+          check helm
+          check htop
+          check zoxide
+          check age
+          check jq
+          check direnv
+          # Direct GitHub downloads → installed to /usr/local/bin
+          check k9s
+          check yq
+          check mkcert
+          check sops
+
+      - name: Show versions
+        if: always()
+        run: |
+          for bin in bat btop fzf helm htop zoxide age jq direnv k9s yq mkcert sops; do
+            command -v "$bin" >/dev/null 2>&1 && echo "$(command -v "$bin"): $($bin --version 2>&1 | head -1)" || true
+          done
+
+  # ── Go ──────────────────────────────────────────────────────────────────────
+  test-go:
+    name: "Go"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+
+      - name: Run installer — go provider
+        # go install puts binaries in $GOPATH/bin which actions/setup-go adds to PATH
+        run: bash ci/install-binaries.sh --managers=go
+
+      - name: Verify go binaries
+        run: |
+          check() {
+            local bin="$1"
+            if command -v "$bin" >/dev/null 2>&1; then
+              echo "✔  $bin  ($(command -v "$bin"))"
+            else
+              echo "✘  $bin  MISSING" >&2
+              return 1
+            fi
+          }
+          check helm-docs
+          check kopia
+          check kubectl-explore
+          check kubectl-kyverno
+          check kubectl-tree
+          check kubectx
+          check kubens
+          check crane
+          check kubecolor
+          check stern
+          check vals
+          check helmfile
+          check kubeconform
+
+  # ── Cargo (Rust) ─────────────────────────────────────────────────────────────
+  test-cargo:
+    name: "Cargo (Rust)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      # Cache compiled artifacts — dramatically speeds up re-runs
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Run installer — cargo provider
+        run: bash ci/install-binaries.sh --managers=cargo
+
+      - name: Verify cargo binaries
+        run: |
+          check() {
+            local bin="$1"
+            if command -v "$bin" >/dev/null 2>&1; then
+              echo "✔  $bin  ($(command -v "$bin"))"
+            else
+              echo "✘  $bin  MISSING" >&2
+              return 1
+            fi
+          }
+          check fd
+          check rg         # ripgrep installs as 'rg'
+          check zellij
+          check bob
+
+  # ── Pip ──────────────────────────────────────────────────────────────────────
+  test-pip:
+    name: "Pip"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Run installer — pip provider
+        run: bash ci/install-binaries.sh --managers=pip
+
+      - name: Verify pip binaries
+        run: |
+          check() {
+            local bin="$1"
+            if command -v "$bin" >/dev/null 2>&1; then
+              echo "✔  $bin  ($(command -v "$bin"))"
+            else
+              echo "✘  $bin  MISSING" >&2
+              return 1
+            fi
+          }
+          check pipreqs
+          check ruff
+          check uv
+
+  # ── Bun / npm ────────────────────────────────────────────────────────────────
+  test-bun:
+    name: "Bun / npm"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Bootstrap bun via its official Action; the registry entry 'bun: bun'
+      # then exercises 'bun add -g bun' (self-update path).
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Run installer — bun/npm provider
+        # --no-skip-existing so 'bun add -g bun' is actually executed
+        run: bash ci/install-binaries.sh --managers=bun --no-skip-existing
+
+      - name: Verify bun
+        run: |
+          command -v bun >/dev/null 2>&1 && echo "✔  bun  ($(bun --version))" \
+            || { echo "✘  bun  MISSING" >&2; exit 1; }

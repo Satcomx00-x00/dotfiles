@@ -93,6 +93,92 @@ is_manager_active() { [[ ",${ACTIVE_MANAGERS}," == *",${1},"* ]]; }
 is_binary_wanted()  { [[ -z "$ONLY_BINARIES" ]] || [[ ",${ONLY_BINARIES}," == *",${1},"* ]]; }
 binary_exists()     { command -v "$1" &>/dev/null; }
 
+# ─── Architecture detection ──────────────────────────────────────────────────
+detect_arch() {
+  case "$(uname -m)" in
+    x86_64)  echo "amd64" ;;
+    aarch64) echo "arm64" ;;
+    armv7l)  echo "arm" ;;
+    *)       uname -m ;;
+  esac
+}
+
+# ─── Direct GitHub release binary installer ──────────────────────────────────
+# install_github_binary <dest> <owner/repo> <asset-regex> [archive-entry]
+#   dest          : final binary name placed under $INSTALL_DIR
+#   owner/repo    : GitHub repository  (e.g. derailed/k9s)
+#   asset-regex   : Python re.search pattern matched against asset filename
+#   archive-entry : (optional) binary name inside a .tar.gz/.zip archive;
+#                   if empty the downloaded file IS the binary
+install_github_binary() {
+  local dest="$1" repo="$2" pattern="$3" entry="${4:-}"
+
+  log "Installing $dest from github.com/$repo…"
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "  [dry-run] github download: $repo  pattern=${pattern}  dest=${INSTALL_DIR}/${dest}"
+    return 0
+  fi
+
+  local api_url="https://api.github.com/repos/${repo}/releases/latest"
+  local -a curl_opts=(-fsSL)
+  [[ -n "${GITHUB_TOKEN:-}" ]] && curl_opts+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+
+  local download_url
+  download_url="$(curl "${curl_opts[@]}" "$api_url" \
+    | python3 -c "
+import sys, json, re
+data = json.load(sys.stdin)
+pat  = sys.argv[1]
+hits = [a['browser_download_url'] for a in data.get('assets', [])
+        if re.search(pat, a['name'])]
+print(hits[0] if hits else '')
+" "$pattern" 2>/dev/null)"
+
+  if [[ -z "$download_url" ]]; then
+    log_error "No release asset matched pattern '${pattern}' in github.com/${repo}"
+    return 1
+  fi
+
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  local filename="${download_url##*/}"
+  local filepath="$tmpdir/$filename"
+
+  log "Downloading ${filename}…"
+  curl -fsSL -o "$filepath" "$download_url"
+
+  local target="${entry:-$dest}"
+
+  if [[ "$filename" == *.tar.gz || "$filename" == *.tgz ]]; then
+    tar -xzf "$filepath" -C "$tmpdir"
+    local found
+    found="$(find "$tmpdir" -name "$target" -type f | head -1)"
+    if [[ -z "$found" ]]; then
+      log_error "Binary '${target}' not found inside ${filename}"
+      rm -rf "$tmpdir"
+      return 1
+    fi
+    install -m 755 "$found" "${INSTALL_DIR}/$dest"
+  elif [[ "$filename" == *.zip ]]; then
+    unzip -q "$filepath" -d "$tmpdir"
+    local found
+    found="$(find "$tmpdir" -name "$target" -type f | head -1)"
+    if [[ -z "$found" ]]; then
+      log_error "Binary '${target}' not found inside ${filename}"
+      rm -rf "$tmpdir"
+      return 1
+    fi
+    install -m 755 "$found" "${INSTALL_DIR}/$dest"
+  else
+    # Plain binary file — rename/move to dest
+    install -m 755 "$filepath" "${INSTALL_DIR}/$dest"
+  fi
+
+  rm -rf "$tmpdir"
+  log_ok "$dest installed → ${INSTALL_DIR}/$dest"
+}
+
 # run_cmd: honours --dry-run; exits 0 so callers can detect "nothing done"
 run_cmd() {
   if [[ "$DRY_RUN" == "true" ]]; then
@@ -208,6 +294,38 @@ https://baltocdn.com/helm/stable/debian/ all main" \
   fi
 }
 
+# ─── APT: direct-download fallback (packages absent from standard Ubuntu repos)
+# Returns:
+#   0  — binary installed successfully (or dry-run)
+#   1  — not a direct-install package; caller should use apt-get
+#   2  — is direct-install, but download failed
+_apt_direct_install() {
+  local binary="$1" pkg="$2"
+  local arch
+  arch="$(detect_arch)"
+  case "$pkg" in
+    k9s)
+      install_github_binary "k9s" "derailed/k9s" \
+        "k9s_Linux_${arch}\.tar\.gz" "k9s" && return 0 || return 2
+      ;;
+    yq)
+      install_github_binary "yq" "mikefarah/yq" \
+        "^yq_linux_${arch}$" "" && return 0 || return 2
+      ;;
+    mkcert)
+      install_github_binary "mkcert" "FiloSottile/mkcert" \
+        "mkcert-v[^-]+-linux-${arch}$" "" && return 0 || return 2
+      ;;
+    sops)
+      install_github_binary "sops" "getsops/sops" \
+        "sops-v[^.]+\.linux\.${arch}$" "" && return 0 || return 2
+      ;;
+    *)
+      return 1  # not a direct-install package
+      ;;
+  esac
+}
+
 # ─── Provider: apt ───────────────────────────────────────────────────────────
 install_apt() {
   log_section "APT"
@@ -234,11 +352,21 @@ install_apt() {
       fi
     fi
 
+    # Packages not in standard Ubuntu repos: install directly from GitHub releases
+    local direct_rc=0
+    _apt_direct_install "$binary" "$pkg" || direct_rc=$?
+    if (( direct_rc == 0 )); then
+      continue  # handled via direct download
+    elif (( direct_rc == 2 )); then
+      record_error "direct: $binary (GitHub download failed)"
+      continue  # apt-get won't have it either — skip
+    fi
+    # direct_rc == 1: not a direct-install package, queue for apt-get
+
     to_install_keys+=("$binary")
     to_install_pkgs+=("$pkg")
     log "Queued: $binary  →  apt:$pkg"
   done < <(parse_section "apt")
-
   if (( ${#to_install_pkgs[@]} == 0 )); then
     log_ok "Nothing to install via apt"
     return 0
