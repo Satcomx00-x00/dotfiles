@@ -61,11 +61,11 @@ ENV PATH="/root/.bun/bin:${PATH}"
 COPY ci/ /ci/
 
 # ── Run the binary installer ──────────────────────────────────────────────────
-# Installs: bat, eza, fzf, helm, htop, k9s, terraform, zoxide (apt)
-#           kubectx, kubens, kubecolor, stern, helmfile, … (go)
-#           zellij, fd, delta, ripgrep, bottom, … (cargo)
-#           ruff, uv, pre-commit, commitizen, … (pip)
-#           bun, yarn, opencode, renovate (bun/npm)
+# Installs: bat, btop, fzf, helm, htop, k9s, zoxide, age, jq, yq, direnv, mkcert, sops (apt/direct)
+#           helm-docs, kopia, kubectx, kubens, kubecolor, stern, helmfile, … (go)
+#           fd, zellij, bob, ripgrep (cargo)
+#           pipreqs, ruff, uv (pip)
+#           bun (bun/npm)
 RUN chmod +x /ci/install-binaries.sh && \
     /ci/install-binaries.sh && \
     # Remove Rust toolchain after building binaries to slim the image

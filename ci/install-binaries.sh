@@ -314,11 +314,11 @@ _apt_direct_install() {
       ;;
     mkcert)
       install_github_binary "mkcert" "FiloSottile/mkcert" \
-        "mkcert-v[^-]+-linux-${arch}$" "" && return 0 || return 2
+        "mkcert-v[0-9.]+-linux-${arch}$" "" && return 0 || return 2
       ;;
     sops)
       install_github_binary "sops" "getsops/sops" \
-        "sops-v[^.]+\.linux\.${arch}$" "" && return 0 || return 2
+        "sops-v[0-9.]+\.linux\.${arch}$" "" && return 0 || return 2
       ;;
     *)
       return 1  # not a direct-install package
