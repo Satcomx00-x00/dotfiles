@@ -1,0 +1,74 @@
+# binaries.yaml — Binary registry for install-binaries.sh
+# The script is executed in CI only to build/update the container image.
+#
+# Format:
+#   manager:
+#     binary-name: package[@version]
+#
+# Providers handled by install-binaries.sh:
+#   apt    — apt-get install (special repos auto-configured where needed)
+#   go     — go install <module>
+#   cargo  — cargo install <crate>
+#   pip    — pip install <package>
+#   npm    — installed via bun add -g (bun is used instead of npm)
+
+cargo:
+  fd: fd-find
+  zellij: zellij
+  bob: bob-nvim           # neovim version manager
+  delta: git-delta        # better git diffs
+  dust: du-dust           # disk usage
+  hyperfine: hyperfine    # benchmarking
+  ripgrep: ripgrep        # rg, faster grep
+  tokei: tokei            # code stats/line counts
+  bottom: bottom          # btm, better htop
+
+apt:
+  bat: bat
+  eza: eza                # modern ls replacement (eza community repo)
+  fzf: fzf
+  helm: helm              # Helm apt repo auto-configured
+  htop: htop
+  k9s: k9s
+  terraform: terraform    # HashiCorp apt repo auto-configured
+  zoxide: zoxide
+  age: age                # modern encryption (secrets)
+  jq: jq                  # JSON processor
+  yq: yq                  # YAML processor
+  direnv: direnv          # per-dir env vars
+  mkcert: mkcert          # local TLS certs
+  sops: sops              # secrets encryption (GitOps)
+
+go:
+  flux: github.com/fluxcd/flux2/cmd/flux@latest
+  helm-docs: github.com/norwoodj/helm-docs/cmd/helm-docs@latest
+  kopia: github.com/kopia/kopia@latest
+  kubectl-explore: github.com/keisku/kubectl-explore@latest
+  kubectl-kyverno: github.com/kyverno/kyverno/cmd/cli/kubectl-kyverno@latest
+  kubectl-tree: github.com/ahmetb/kubectl-tree@latest
+  kubectx: github.com/ahmetb/kubectx/cmd/kubectx@latest
+  kubens: github.com/ahmetb/kubectx/cmd/kubens@latest
+  crane: github.com/google/go-containerregistry/cmd/crane@latest       # OCI registry tool (Harbor)
+  kubecolor: github.com/kubecolor/kubecolor@latest                     # colorized kubectl
+  stern: github.com/stern/stern@latest                                 # multi-pod log tailing
+  vals: github.com/helmfile/vals@latest                                # secrets interpolation
+  helmfile: github.com/helmfile/helmfile@latest                        # declarative helm releases
+  kubeconform: github.com/yannh/kubeconform@latest                     # K8s manifest validation
+  golangci-lint: github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+  syft: github.com/anchore/syft/cmd/syft@latest                       # SBOM gen
+  grype: github.com/anchore/grype/cmd/grype@latest                    # vuln scanner
+
+npm:
+  bun: bun
+  opencode: opencode-ai
+  yarn: yarn
+  renovate: renovate      # dependency update automation
+
+pip:
+  pipreqs: pipreqs
+  ruff: ruff
+  uv: uv
+  pre-commit: pre-commit  # git hooks framework
+  httpie: httpie          # hx, better curl
+  commitizen: commitizen  # conventional commits
+  detect-secrets: detect-secrets  # secret scanning
