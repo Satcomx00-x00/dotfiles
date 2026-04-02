@@ -25,7 +25,7 @@ env:
 # ─────────────────────────────────────────────────────────────────────────────
 jobs:
 
-  # ── apt + direct GitHub downloads (k9s, yq, mkcert, sops) ─────────────────
+  # ── apt + third-party repos (eza, helm, terraform) + direct GitHub downloads (k9s, yq, mkcert, sops) ──
   test-apt:
     name: "apt  /  direct (k9s · yq · mkcert · sops)"
     runs-on: ubuntu-latest
@@ -57,9 +57,11 @@ jobs:
           # Standard apt packages
           check bat || check batcat   # Ubuntu ships bat as batcat
           check btop
+          check eza
           check fzf
           check helm
           check htop
+          check terraform
           check zoxide
           check age
           check jq
@@ -73,7 +75,7 @@ jobs:
       - name: Show versions
         if: always()
         run: |
-          for bin in bat btop fzf helm htop zoxide age jq direnv k9s yq mkcert sops; do
+          for bin in bat btop eza fzf helm htop terraform zoxide age jq direnv k9s yq mkcert sops; do
             command -v "$bin" >/dev/null 2>&1 && echo "$(command -v "$bin"): $($bin --version 2>&1 | head -1)" || true
           done
 

@@ -21,10 +21,12 @@ cargo:
 apt:
   bat: bat
   btop: btop
+  eza: eza                # modern ls replacement (eza community repo auto-configured)
   fzf: fzf
   helm: helm              # Helm apt repo auto-configured
   htop: htop
   k9s: k9s               # direct GitHub download (not in standard Ubuntu repos)
+  terraform: terraform    # HashiCorp apt repo auto-configured
   zoxide: zoxide
   age: age                # modern encryption (secrets)
   jq: jq                  # JSON processor

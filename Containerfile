@@ -61,7 +61,7 @@ ENV PATH="/root/.bun/bin:${PATH}"
 COPY ci/ /ci/
 
 # ── Run the binary installer ──────────────────────────────────────────────────
-# Installs: bat, btop, fzf, helm, htop, k9s, zoxide, age, jq, yq, direnv, mkcert, sops (apt/direct)
+# Installs: bat, btop, eza, fzf, helm, htop, k9s, terraform, zoxide, age, jq, yq, direnv, mkcert, sops (apt/direct)
 #           helm-docs, kopia, kubectx, kubens, kubecolor, stern, helmfile, … (go)
 #           fd, zellij, bob, ripgrep (cargo)
 #           pipreqs, ruff, uv (pip)
@@ -112,8 +112,10 @@ RUN zsh --version && \
     go version && \
     bat --version && \
     btop --version && \
+    eza --version && \
     zoxide --version && \
     kubectx --version && \
+    terraform version && \
     k9s version && \
     zellij --version
 
