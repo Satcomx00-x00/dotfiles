@@ -69,9 +69,10 @@ COPY ci/ /ci/
 RUN chmod +x /ci/install-binaries.sh && \
     /ci/install-binaries.sh && \
     # Remove Rust toolchain after building binaries to slim the image
-    rustup self uninstall -y || true && \
-    rm -rf /usr/local/rustup /usr/local/cargo && \
-    rm -rf /root/.cargo/registry /root/.cargo/git && \
+    if ! rustup self uninstall -y; then \
+        echo "WARNING: rustup uninstall failed; residual toolchain files may remain" >&2; \
+    fi && \
+    rm -rf /usr/local/rustup /usr/local/cargo /root/.cargo && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Oh My Zsh (system-wide)

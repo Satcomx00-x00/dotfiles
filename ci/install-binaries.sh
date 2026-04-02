@@ -146,7 +146,7 @@ with open(registry) as fh:
         m = re.match(r'\s+(\S+):\s*(\S.*)', line)
         if m:
             key   = m.group(1)
-            value = re.sub(r'\s+#.*$', '', m.group(2)).strip()
+            value = re.sub(r'\s*#.*$', '', m.group(2)).strip()
             print(f"{key} {value}")
 PYEOF
 }
