@@ -1,0 +1,63 @@
+# binaries.yaml — Binary registry for install-binaries.sh
+# The script is executed in CI only to build/update the container image.
+#
+# Format:
+#   manager:
+#     binary-name: package[@version]
+#
+# Providers handled by install-binaries.sh:
+#   apt    — apt-get install (special repos auto-configured where needed)
+#   github — pre-built binary downloaded from GitHub Releases
+#              value format: owner/repo|asset-regex|archive-entry
+#              {ARCH} in the pattern is replaced with uname -m (x86_64 / aarch64)
+#              archive-entry is the binary name inside a .tar.gz/.zip archive;
+#              omit (or use an empty third field) if the asset is a plain binary
+#   go     — go install <module>
+#   pip    — pip install <package>
+#   npm    — installed via bun add -g (bun is used instead of npm)
+
+github:
+  fd: sharkdp/fd|fd-v[0-9.]+-{ARCH}-unknown-linux-musl\.tar\.gz|fd
+  zellij: zellij-org/zellij|zellij-{ARCH}-unknown-linux-musl\.tar\.gz|zellij
+  bob: MordechaiHadad/bob|bob-linux-{ARCH}\.zip|bob
+  rg: BurntSushi/ripgrep|ripgrep-[0-9.]+-{ARCH}-unknown-linux-musl\.tar\.gz|rg
+  kyverno: kyverno/kyverno|kyverno-cli_v[0-9.]+_linux_{ARCH}\.tar\.gz|kyverno
+
+apt:
+  bat: bat
+  btop: btop
+  eza: eza                # modern ls replacement (eza community repo auto-configured)
+  fzf: fzf
+  helm: helm              # Helm apt repo auto-configured
+  htop: htop
+  k9s: k9s               # direct GitHub download (not in standard Ubuntu repos)
+  terraform: terraform    # HashiCorp apt repo auto-configured
+  zoxide: zoxide
+  age: age                # modern encryption (secrets)
+  jq: jq                  # JSON processor
+  yq: yq                  # YAML processor — direct GitHub download (mikefarah/yq)
+  direnv: direnv          # per-dir env vars
+  mkcert: mkcert          # local TLS certs — direct GitHub download (FiloSottile/mkcert)
+  sops: sops              # secrets encryption — direct GitHub download (getsops/sops)
+
+go:
+  helm-docs: github.com/norwoodj/helm-docs/cmd/helm-docs@latest
+  kopia: github.com/kopia/kopia@latest
+  kubectl-explore: github.com/keisku/kubectl-explore@latest
+  kubectl-tree: github.com/ahmetb/kubectl-tree/cmd/kubectl-tree@latest
+  kubectx: github.com/ahmetb/kubectx/cmd/kubectx@latest
+  kubens: github.com/ahmetb/kubectx/cmd/kubens@latest
+  crane: github.com/google/go-containerregistry/cmd/crane@latest       # OCI registry tool (Harbor)
+  kubecolor: github.com/kubecolor/kubecolor@latest                     # colorized kubectl
+  stern: github.com/stern/stern@latest                                 # multi-pod log tailing
+  vals: github.com/helmfile/vals/cmd/vals@latest                       # secrets interpolation
+  helmfile: github.com/helmfile/helmfile@latest                        # declarative helm releases
+  kubeconform: github.com/yannh/kubeconform/cmd/kubeconform@latest     # K8s manifest validation
+
+npm:
+  bun: bun
+
+pip:
+  pipreqs: pipreqs
+  ruff: ruff
+  uv: uv

@@ -16,8 +16,8 @@ FROM ubuntu:22.04
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install essential packages
-RUN apt-get update && apt-get install -y \
+# ── Base system packages ──────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
     zsh \
     git \
     curl \
@@ -25,46 +25,41 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     build-essential \
     unzip \
-    fzf \
-    ripgrep \
-    fd-find \
-    bat \
-    htop \
-    ncdu \
-    jq \
-    tree \
+    gnupg \
+    lsb-release \
+    python3 \
+    python3-pip \
     sudo \
-    gpg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install eza (modern ls replacement)
-RUN mkdir -p /etc/apt/keyrings && \
-    wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | gpg --dearmor -o /etc/apt/keyrings/gierens.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | tee /etc/apt/sources.list.d/gierens.list && \
-    chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list && \
-    apt-get update && \
-    apt-get install -y eza && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install zoxide (smart cd)
-RUN curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
-
-# Create bat symlink (Debian/Ubuntu ships bat as batcat)
-RUN mkdir -p /usr/local/bin && \
-    ln -sf "$(command -v batcat)" /usr/local/bin/bat && \
-    chmod +x /usr/local/bin/bat
-
-# Install k9s - Kubernetes CLI To Manage Your Clusters In Style!
+# ── Go (required by install-binaries.sh for the go provider) ─────────────────
+ARG GO_VERSION=1.22.4
 RUN ARCH="$(uname -m)" && \
-    if [ "$ARCH" = "x86_64" ]; then K9S_ARCH="amd64"; \
-    elif [ "$ARCH" = "aarch64" ]; then K9S_ARCH="arm64"; \
-    else K9S_ARCH="$ARCH"; fi && \
-    K9S_VERSION="0.32.4" && \
-    curl -sL "https://github.com/derailed/k9s/releases/download/v${K9S_VERSION}/k9s_Linux_${K9S_ARCH}.tar.gz" -o /tmp/k9s.tar.gz && \
-    tar xzf /tmp/k9s.tar.gz -C /tmp && \
-    mv /tmp/k9s /usr/local/bin/k9s && \
-    chmod +x /usr/local/bin/k9s && \
-    rm -rf /tmp/*
+    case "$ARCH" in x86_64) GOARCH=amd64 ;; aarch64) GOARCH=arm64 ;; *) GOARCH="$ARCH" ;; esac && \
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH}.tar.gz" \
+        | tar -C /usr/local -xz && \
+    ln -sf /usr/local/go/bin/go   /usr/local/bin/go && \
+    ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+
+ENV GOPATH=/go
+ENV PATH="${GOPATH}/bin:/usr/local/go/bin:${PATH}"
+
+# ── Bun (used in place of npm — required for the npm/bun provider) ────────────
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
+
+# ── Copy CI scripts early (maximises Docker layer caching) ────────────────────
+COPY ci/ /ci/
+
+# ── Run the binary installer ──────────────────────────────────────────────────
+# Installs: bat, btop, eza, fzf, helm, htop, k9s, terraform, zoxide, age, jq, yq, direnv, mkcert, sops (apt/direct)
+#           helm-docs, kopia, kubectx, kubens, kubecolor, stern, helmfile, … (go)
+#           fd, zellij, bob, rg, kyverno (github releases — pre-built musl/official binaries)
+#           pipreqs, ruff, uv (pip)
+#           bun (bun/npm)
+RUN chmod +x /ci/install-binaries.sh && \
+    /ci/install-binaries.sh && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Oh My Zsh (system-wide)
 ENV ZSH=/usr/share/oh-my-zsh
@@ -97,14 +92,22 @@ WORKDIR /dotfiles
 # Copy dotfiles repository
 COPY . /dotfiles
 
-# Verify installations
-RUN k9s version && \
-    zsh --version && \
+# Verify key installations
+RUN zsh --version && \
     git --version && \
-    fzf --version && \
+    go version && \
+    bat --version && \
+    btop --version && \
     eza --version && \
+    fd --version && \
+    rg --version && \
+    bob --version && \
+    zellij --version && \
+    kyverno version && \
     zoxide --version && \
-    bat --version
+    kubectx --version && \
+    terraform version && \
+    k9s version
 
 # Default to zsh
 SHELL ["/bin/zsh", "-c"]
