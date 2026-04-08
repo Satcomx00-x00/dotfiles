@@ -1,26 +1,126 @@
-// xcad Theme for Zellij
-// Purple-blue gradient color scheme
-
 themes {
-    xcad {
-    fg 241 241 241
-    bg 26 26 26
-    black 18 18 18
-    red 165 42 255
-    green 113 41 255
-    yellow 61 42 255
-    blue 43 79 255
-    magenta 40 131 255
-    cyan 40 185 255
-    white 241 241 241
-    orange 186 90 255
-    bright_black 102 102 102
-    bright_red 186 90 255
-    bright_green 144 90 255
-    bright_yellow 104 90 255
-    bright_blue 92 120 255
-    bright_magenta 94 162 255
-    bright_cyan 90 200 255
-    bright_white 255 255 255
+    digital-life {
+        frame_unselected {
+            base 49 46 129
+            background 15 15 20
+            emphasis_0 124 58 237
+            emphasis_1 129 140 248
+            emphasis_2 167 139 250
+            emphasis_3 250 204 21
+        }
+        frame_selected {
+            base 124 58 237
+            background 15 15 20
+            emphasis_0 196 181 253
+            emphasis_1 165 180 252
+            emphasis_2 125 211 252
+            emphasis_3 253 230 138
+        }
+        frame_highlight {
+            base 167 139 250
+            background 30 27 46
+            emphasis_0 124 58 237
+            emphasis_1 129 140 248
+            emphasis_2 56 189 248
+            emphasis_3 250 204 21
+        }
+        ribbon_unselected {
+            base 203 213 225
+            background 30 27 46
+            emphasis_0 124 58 237
+            emphasis_1 129 140 248
+            emphasis_2 56 189 248
+            emphasis_3 250 204 21
+        }
+        ribbon_selected {
+            base 15 15 20
+            background 124 58 237
+            emphasis_0 196 181 253
+            emphasis_1 165 180 252
+            emphasis_2 125 211 252
+            emphasis_3 253 230 138
+        }
+        text_unselected {
+            base 203 213 225
+            background 15 15 20
+            emphasis_0 124 58 237
+            emphasis_1 129 140 248
+            emphasis_2 167 139 250
+            emphasis_3 250 204 21
+        }
+        text_selected {
+            base 15 15 20
+            background 167 139 250
+            emphasis_0 124 58 237
+            emphasis_1 196 181 253
+            emphasis_2 56 189 248
+            emphasis_3 253 230 138
+        }
+        table_title {
+            base 167 139 250
+            background 15 15 20
+            emphasis_0 124 58 237
+            emphasis_1 196 181 253
+            emphasis_2 56 189 248
+            emphasis_3 250 204 21
+        }
+        table_cell_unselected {
+            base 203 213 225
+            background 15 15 20
+            emphasis_0 124 58 237
+            emphasis_1 129 140 248
+            emphasis_2 167 139 250
+            emphasis_3 250 204 21
+        }
+        table_cell_selected {
+            base 15 15 20
+            background 109 40 217
+            emphasis_0 196 181 253
+            emphasis_1 165 180 252
+            emphasis_2 125 211 252
+            emphasis_3 253 230 138
+        }
+        list_unselected {
+            base 203 213 225
+            background 15 15 20
+            emphasis_0 124 58 237
+            emphasis_1 129 140 248
+            emphasis_2 167 139 250
+            emphasis_3 250 204 21
+        }
+        list_selected {
+            base 15 15 20
+            background 109 40 217
+            emphasis_0 196 181 253
+            emphasis_1 165 180 252
+            emphasis_2 125 211 252
+            emphasis_3 253 230 138
+        }
+        exit_code_success {
+            base 109 40 217
+            emphasis_0 196 181 253
+            emphasis_1 165 180 252
+            emphasis_2 125 211 252
+            emphasis_3 253 230 138
+        }
+        exit_code_error {
+            base 248 113 113
+            emphasis_0 253 224 200
+            emphasis_1 252 191 175
+            emphasis_2 254 215 170
+            emphasis_3 254 243 199
+        }
+        multiplayer_user_colors {
+            player_1 124 58 237
+            player_2 167 139 250
+            player_3 109 40 217
+            player_4 196 181 253
+            player_5 99 102 241
+            player_6 129 140 248
+            player_7 79 70 229
+            player_8 165 180 252
+            player_9 49 46 129
+            player_10 224 231 255
+        }
     }
 }
