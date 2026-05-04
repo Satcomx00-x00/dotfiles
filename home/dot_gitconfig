@@ -1,0 +1,55 @@
+# Managed by chezmoi - https://www.chezmoi.io/
+
+[user]
+    name = "Satcomx00"
+    email = "satcomx00@nonex.com"
+
+[core]
+    editor = code --wait
+    autocrlf = input
+    safecrlf = warn
+
+[init]
+    defaultBranch = main
+# Disable GPG signing by default to avoid authentication issues
+# Uncomment and configure if you want to enable commit signing
+# [commit]
+#     gpgsign = true
+# [gpg]
+#     program = gpg
+
+[alias]
+    st = status
+    co = checkout
+    ci = commit
+    br = branch
+    lg = log --oneline --graph --decorate
+    lga = log --oneline --graph --decorate --all
+    unstage = reset HEAD --
+    last = log -1 HEAD
+    amend = commit --amend --no-edit
+    undo = reset --soft HEAD~1
+
+[pull]
+    rebase = true
+
+[push]
+    default = simple
+    followTags = true
+
+[fetch]
+    prune = true
+
+[rebase]
+    autoStash = true
+
+[diff]
+
+[merge]
+    conflictstyle = diff3
+
+[color]
+    ui = auto
+
+[help]
+    autocorrect = 1
