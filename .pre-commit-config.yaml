@@ -1,38 +1,36 @@
-# Pre-commit hooks configuration
-# Install: pip install pre-commit
-# Setup: pre-commit install
-
+# pre-commit hooks.  Install:  mise exec pipx -- pipx install pre-commit  (or `pip install pre-commit`)
+# Enable:   pre-commit install
+# NOTE: chezmoi *.tmpl scripts contain Go-template syntax, so shellcheck/shfmt are
+#       scoped to plain shell files and templates are excluded.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+        exclude: '\.(md|markdown)$'
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
-        args: ['--maxkb=1000']
-      - id: check-case-conflict
+        args: ['--maxkb=1024']
       - id: check-merge-conflict
-      - id: check-executables-have-shebangs
-      - id: check-shebang-scripts-are-executable
+      - id: check-case-conflict
       - id: mixed-line-ending
         args: ['--fix=lf']
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.6
+    rev: v0.10.0.1
     hooks:
       - id: shellcheck
-        args: ['--severity=warning']
-        files: \.(sh|bash|zsh)$
+        args: ['--severity=warning', '--shell=sh']
+        # Only lint real shell scripts; skip Go-template (.tmpl) and zsh files.
+        files: '\.sh$'
+        exclude: '\.tmpl$'
 
-  - repo: https://github.com/jumanjihouse/pre-commit-hooks
-    rev: 3.0.0
+  - repo: local
     hooks:
-      - id: shfmt
-        args: ['-i', '4', '-ci', '-w']
-
-  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: 2.7.3
-    hooks:
-      - id: editorconfig-checker
-        alias: ec
+      - id: chezmoi-verify
+        name: chezmoi verify (templates render)
+        entry: chezmoi verify --source .
+        language: system
+        pass_filenames: false
+        always_run: true

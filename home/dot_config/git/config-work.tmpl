@@ -1,0 +1,7 @@
+# Work identity for repos under ~/work/ (included via includeIf in the main config).
+# Applied only when `workEmail` is set (see .chezmoiignore).
+[user]
+	email = {{ .workEmail }}
+{{- if and .gpgSign .signingKey }}
+	signingkey = {{ .signingKey }}
+{{- end }}

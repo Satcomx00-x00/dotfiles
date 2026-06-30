@@ -1,0 +1,32 @@
+{{/* Interactive first-run setup. Answers persist to ~/.config/chezmoi/chezmoi.toml */}}
+{{/* and are NEVER re-asked (the *Once helpers), so re-init / 2nd machine / CI stay quiet. */}}
+{{- $name        := promptStringOnce . "name"        "Full name (git author)" -}}
+{{- $email       := promptStringOnce . "email"       "Primary git email" -}}
+{{- $editor      := promptStringOnce . "editor"      "Preferred editor" "nvim" -}}
+{{- $machineType := promptChoiceOnce . "machineType" "Machine type" (list "personal" "work" "server") "personal" -}}
+{{- $gpgSign     := promptBoolOnce   . "gpgSign"     "Enable SSH commit signing" false -}}
+{{- $signingKey  := promptStringOnce . "signingKey"  "SSH signing key (path or 'key::...'; blank to skip)" "" -}}
+{{- $workEmail   := promptStringOnce . "workEmail"   "Work email for repos under ~/work/ (blank to skip)" "" -}}
+{{- $headless    := promptBoolOnce   . "headless"    "Headless host? (no GUI -> skip Nerd Fonts)" (env "DISPLAY" | not) -}}
+
+[data]
+    name        = {{ $name | quote }}
+    email       = {{ $email | quote }}
+    editor      = {{ $editor | quote }}
+    machineType = {{ $machineType | quote }}
+    gpgSign     = {{ $gpgSign }}
+    signingKey  = {{ $signingKey | quote }}
+    workEmail   = {{ $workEmail | quote }}
+    headless    = {{ $headless }}
+
+# `delta` is git's diff pager (see git config). chezmoi keeps its own built-in
+# colored diff so `chezmoi diff` works before mise installs delta.
+
+# To enable encrypted secrets later:
+#   1) age-keygen -o ~/.config/chezmoi/key.txt
+#   2) uncomment below and set `recipient` to the public key printed by age-keygen
+#   3) add files with: chezmoi add --encrypt ~/.ssh/id_ed25519
+# encryption = "age"
+# [age]
+#     identity  = "~/.config/chezmoi/key.txt"
+#     recipient = "age1replace-me"

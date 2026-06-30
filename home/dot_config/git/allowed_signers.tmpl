@@ -1,0 +1,8 @@
+# git SSH allowed signers — used to VERIFY signatures (git log --show-signature).
+# Signing itself only needs user.signingkey; this file is optional but recommended.
+# Add your *public* key, one entry per identity:
+#
+#   {{ .email }} namespaces="git" ssh-ed25519 AAAA...your-public-key...
+{{- if .workEmail }}
+#   {{ .workEmail }} namespaces="git" ssh-ed25519 AAAA...your-public-key...
+{{- end }}

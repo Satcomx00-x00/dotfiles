@@ -1,0 +1,38 @@
+# Global gitignore (core.excludesfile). Patterns ignored in every repo.
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editors / IDEs
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.code-workspace
+.netrwhist
+
+# Languages / tooling
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.direnv/
+.mise.local.toml
+
+# Secrets / env (commit explicitly if ever needed)
+.env
+.env.local
+*.pem
+*.key
+
+# Logs / caches
+*.log
+.cache/

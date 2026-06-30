@@ -1,0 +1,89 @@
+# ~/.config/git/config — managed by chezmoi (identity comes from prompted data).
+[user]
+	name = {{ .name }}
+	email = {{ .email }}
+{{- if and .gpgSign .signingKey }}
+	signingkey = {{ .signingKey }}
+{{- end }}
+
+[init]
+	defaultBranch = main
+[column]
+	ui = auto
+[branch]
+	sort = -committerdate
+[tag]
+	sort = version:refname
+[push]
+	default = simple
+	autoSetupRemote = true
+	followTags = true
+[fetch]
+	prune = true
+	pruneTags = true
+	all = true
+[pull]
+	rebase = true
+[rebase]
+	autoStash = true
+	autoSquash = true
+	updateRefs = true
+[merge]
+	conflictstyle = zdiff3
+[diff]
+	algorithm = histogram
+	colorMoved = default
+	mnemonicPrefix = true
+	renames = true
+[rerere]
+	enabled = true
+	autoupdate = true
+[commit]
+	verbose = true
+{{- if .gpgSign }}
+	gpgsign = true
+{{- end }}
+{{- if .gpgSign }}
+[tag]
+	gpgsign = true
+[gpg]
+	format = ssh
+[gpg "ssh"]
+	allowedSignersFile = ~/.config/git/allowed_signers
+{{- end }}
+[core]
+	excludesfile = ~/.config/git/ignore
+	editor = {{ .editor }}
+	pager = delta
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	navigate = true
+	line-numbers = true
+	side-by-side = true
+	hyperlinks = true
+	syntax-theme = Monokai Extended
+[help]
+	autocorrect = prompt
+[alias]
+	st = status -sb
+	co = checkout
+	sw = switch
+	br = branch
+	ci = commit
+	aa = add -A
+	cm = commit -m
+	amend = commit --amend --no-edit
+	last = log -1 HEAD --stat
+	unstage = reset HEAD --
+	undo = reset --soft HEAD~1
+	lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) %C(auto)%d%C(reset) %s %C(dim white)(%an, %ar)%C(reset)'
+	lga = log --graph --abbrev-commit --decorate --all --format=format:'%C(bold blue)%h%C(reset) %C(auto)%d%C(reset) %s %C(dim white)(%an, %ar)%C(reset)'
+	sync = !git pull --rebase --autostash && git push
+	aliases = !git config --get-regexp '^alias\\.' | sed 's/^alias\\.//'
+{{- if .workEmail }}
+
+# Repos under ~/work/ use the work identity (native git, no chezmoi needed at runtime).
+[includeIf "gitdir:~/work/"]
+	path = ~/.config/git/config-work
+{{- end }}

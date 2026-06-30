@@ -1,0 +1,7 @@
+# ~/.zprofile — login shells (sourced before ~/.zshrc).
+# Wire mise SHIMS for non-interactive/login contexts (cron, IDEs, scripts) so
+# mise-managed tools resolve there too. Interactive activation lives in ~/.zshrc.
+export PATH="$HOME/.local/bin:$PATH"
+if command -v mise >/dev/null 2>&1; then
+    eval "$(mise activate zsh --shims)"
+fi
