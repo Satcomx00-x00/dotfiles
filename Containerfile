@@ -54,13 +54,28 @@ RUN sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /root/.local/bin
 
 COPY . /src
 
-RUN chezmoi init --apply --source=/src --no-tty \
-        --promptChoice "Machine profile=${PROFILE}" \
-        --promptChoice "Tool tier=${TIER}" \
-        --promptChoice "Secrets backend=none" \
-        --promptBool "Enable SSH commit signing=false" \
-        --promptString "SSH signing key path=" \
-    && chezmoi purge --force 2>/dev/null || true
+# GITHUB_TOKEN is mounted as a BuildKit secret, never a build-arg: a build-arg
+# is recorded in the image history and readable by anyone who pulls it.
+#
+# Without a token, mise makes unauthenticated GitHub API calls capped at 60/hour
+# per IP. The full tier resolves ~70 tools, and on a shared CI runner that limit
+# is often already spent — which silently drops tools from the image, because
+# phase 4 warns rather than aborting. The build is unauthenticated-safe (it just
+# installs less), so the secret is optional and absent locally.
+RUN --mount=type=secret,id=github_token \
+    sh -eu -c ' \
+        if [ -s /run/secrets/github_token ]; then \
+            GITHUB_TOKEN=$(cat /run/secrets/github_token); \
+            export GITHUB_TOKEN; \
+        fi; \
+        chezmoi init --apply --source=/src --no-tty \
+            --promptChoice "Machine profile=${PROFILE}" \
+            --promptChoice "Tool tier=${TIER}" \
+            --promptChoice "Secrets backend=none" \
+            --promptBool "Enable SSH commit signing=false" \
+            --promptString "SSH signing key path=" \
+        && chezmoi purge --force 2>/dev/null || true \
+    '
 
 # Neovim's plugins were synced by the apply above (phase 7), so the first real
 # launch is instant rather than a two-minute download.

@@ -10,6 +10,12 @@
 #
 # Version pins are checked too — a pinned version that no longer exists
 # upstream is exactly as broken as a bad backend.
+#
+# KNOWN BLIND SPOT: this proves a backend RESOLVES, not that it INSTALLS.
+# `aqua:golang/tools/gopls` resolved to v0.23.0 here and passed for months,
+# while `mise install` rejected it outright — the aqua registry entry is package
+# type `go_install`, which that backend cannot build. Only a real install finds
+# this class, which is what the image workflow's assert step now does at `full`.
 
 set -eu
 

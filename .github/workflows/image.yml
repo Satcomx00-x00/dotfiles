@@ -108,6 +108,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=min
           provenance: false
+          # mise resolves ~70 tools through the GitHub API. Unauthenticated
+          # that is capped at 60/hour per IP, and a shared runner has usually
+          # spent some already — the first run of this workflow lost bun,
+          # helm-ls and kubens to 403s. A secret, not a build-arg: build-args
+          # are readable in the image history.
+          secrets: |
+            github_token=${{ secrets.GITHUB_TOKEN }}
 
       # The repository's own post-apply assertions — the same test/assert.sh
       # that ci.yml's apply job runs — pointed at the built image instead of a

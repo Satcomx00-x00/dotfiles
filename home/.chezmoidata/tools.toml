@@ -332,7 +332,12 @@
 
 [[tools.list]]
     name    = "gopls"
-    backend = "aqua:golang/tools/gopls"
+    # NOT aqua: the aqua registry entry for gopls is package type `go_install`,
+    # which the aqua backend cannot install — `mise latest` resolves it happily
+    # (which is why verify-tools passed it) but `mise install` refuses. gopls
+    # ships no prebuilt binaries, so the go backend is the only route. Requires
+    # `go`, which is rank 2 alongside it.
+    backend = "go:golang.org/x/tools/gopls"
     version = "latest"
     rank    = 2
     group   = "lsp"
