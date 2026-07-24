@@ -464,6 +464,9 @@
     rank    = 2
     group   = "lsp"
     role    = "Helm chart LSP"
+    # The release ships the binary as `helm_ls`, not `helm-ls`. nvim's
+    # lsp.lua points at the same name.
+    bin     = "helm_ls"
 
 # ═══ Containers ══════════════════════════════════════════════════════════════
 # The Docker engine is NOT installed — client tooling and aliases only.
@@ -524,8 +527,18 @@
     version = "latest"
     rank    = 2
     group   = "k8s"
-    role    = "context and namespace switching"
-    bins    = ["kubens"]
+    role    = "context switching"
+
+# kubens is a SEPARATE aqua package, not a second binary inside kubectx —
+# `aqua:ahmetb/kubectx` ships one file. Declaring it as `bins` meant it was
+# asserted but never installed.
+[[tools.list]]
+    name    = "kubens"
+    backend = "aqua:ahmetb/kubectx/kubens"
+    version = "latest"
+    rank    = 2
+    group   = "k8s"
+    role    = "namespace switching"
 
 [[tools.list]]
     name    = "kustomize"
@@ -573,11 +586,17 @@
 
 [[tools.list]]
     name    = "ansible"
-    backend = "pipx:ansible"
+    # ansible-core, NOT the `ansible` bundle. uv/pipx only exposes the entry
+    # points the requested distribution declares, and the `ansible` bundle
+    # declares exactly one — `ansible-community`. The actual commands live in
+    # ansible-core, so `pipx:ansible` installed ~800 collections and produced
+    # no `ansible` binary at all.
+    backend = "pipx:ansible-core"
     version = "latest"
     rank    = 2
     group   = "infra"
     role    = "configuration management"
+    bins    = ["ansible-playbook", "ansible-galaxy", "ansible-vault"]
 
 # ═══ Secrets ═════════════════════════════════════════════════════════════════
 

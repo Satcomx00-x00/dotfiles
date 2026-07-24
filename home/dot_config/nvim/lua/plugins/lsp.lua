@@ -41,7 +41,9 @@ local servers = {
   tflint = "tflint",
   yamlls = "yaml-language-server",
   ansiblels = "ansible-language-server",
-  helm_ls = "helm-ls",
+  -- The release binary is `helm_ls`; `helm-ls` is the repo name and does not
+  -- exist on PATH, so this server never started.
+  helm_ls = "helm_ls",
   -- lua, for this config itself
   lua_ls = "lua-language-server",
 }

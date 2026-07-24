@@ -185,7 +185,7 @@ independent, so a small VPS can be a `server` on `minimal`.
 | `yamllint` | YAML linter | full | `pipx:yamllint` |
 | `ansible-lint` | Ansible linter | full | `pipx:ansible-lint` |
 | `ansible-language-server` | Ansible LSP | full | `npm:@ansible/ansible-language-server` |
-| `helm-ls` | Helm chart LSP | full | `aqua:mrjosh/helm-ls` |
+| `helm_ls` | Helm chart LSP | full | `aqua:mrjosh/helm-ls` |
 
 **container**
 
@@ -202,7 +202,8 @@ independent, so a small VPS can be a `server` on `minimal`.
 | `kubectl` | cluster CLI | full | `aqua:kubernetes/kubectl` |
 | `k9s` | terminal cluster UI | full | `aqua:derailed/k9s` |
 | `helm` | chart management | full | `aqua:helm/helm` |
-| `kubectx` | context and namespace switching | full | `aqua:ahmetb/kubectx` |
+| `kubectx` | context switching | full | `aqua:ahmetb/kubectx` |
+| `kubens` | namespace switching | full | `aqua:ahmetb/kubectx/kubens` |
 | `kustomize` | manifest overlays | full | `aqua:kubernetes-sigs/kustomize` |
 | `stern` | multi-pod log tailing | full | `aqua:stern/stern` |
 
@@ -213,7 +214,7 @@ independent, so a small VPS can be a `server` on `minimal`.
 | `terraform` | infrastructure as code | full | `aqua:hashicorp/terraform` |
 | `tofu` | Terraform fork, installed alongside | full | `aqua:opentofu/opentofu` |
 | `aws` | AWS CLI v2 | full | `aqua:aws/aws-cli` |
-| `ansible` | configuration management | full | `pipx:ansible` |
+| `ansible` | configuration management | full | `pipx:ansible-core` |
 
 **secrets**
 
@@ -233,7 +234,7 @@ independent, so a small VPS can be a `server` on `minimal`.
 | `win32yank` | WSL2 clipboard bridge for Neovim | standard | `github:equalsraf/win32yank` |
 
 
-Totals: **minimal** 11 · **standard** 40 · **full** 71
+Totals: **minimal** 11 · **standard** 40 · **full** 72
 <!-- END GENERATED: tools -->
 
 ---
