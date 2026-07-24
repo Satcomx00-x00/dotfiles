@@ -1,0 +1,71 @@
+# Third-party trees fetched and kept fresh by chezmoi itself — no imperative
+# `git clone` scripts, no plugin manager, no submodules.
+#
+# refreshPeriod = how stale a download may get before `chezmoi update` (or
+# `chezmoi apply --refresh-externals`) re-pulls it. A plain `chezmoi apply`
+# never re-downloads, so day-to-day applies stay fast and work offline.
+#
+# Everything lands under XDG paths; ~/.zshrc sources them directly.
+
+# ─── zsh-defer: the whole reason this setup has no plugin manager ─────────────
+# Queues a command to run after the first prompt is drawn. Startup cost of a
+# deferred plugin is ~0, so we get framework features at no framework price.
+[".local/share/zsh/plugins/zsh-defer"]
+    type            = "archive"
+    url             = "https://github.com/romkatv/zsh-defer/archive/refs/heads/master.tar.gz"
+    exact           = true
+    stripComponents = 1
+    refreshPeriod   = "168h"
+
+# ─── Interactive plugins (all deferred; see ~/.zshrc step 7) ──────────────────
+[".local/share/zsh/plugins/zsh-autosuggestions"]
+    type            = "archive"
+    url             = "https://github.com/zsh-users/zsh-autosuggestions/archive/refs/heads/master.tar.gz"
+    exact           = true
+    stripComponents = 1
+    refreshPeriod   = "168h"
+
+# fast-syntax-highlighting: same job as zsh-syntax-highlighting but noticeably
+# quicker on long lines, and it does not need to be sourced dead last.
+[".local/share/zsh/plugins/fast-syntax-highlighting"]
+    type            = "archive"
+    url             = "https://github.com/zdharma-continuum/fast-syntax-highlighting/archive/refs/heads/master.tar.gz"
+    exact           = true
+    stripComponents = 1
+    refreshPeriod   = "168h"
+
+[".local/share/zsh/plugins/zsh-completions"]
+    type            = "archive"
+    url             = "https://github.com/zsh-users/zsh-completions/archive/refs/heads/master.tar.gz"
+    exact           = true
+    stripComponents = 1
+    refreshPeriod   = "168h"
+
+[".local/share/zsh/plugins/zsh-history-substring-search"]
+    type            = "archive"
+    url             = "https://github.com/zsh-users/zsh-history-substring-search/archive/refs/heads/master.tar.gz"
+    exact           = true
+    stripComponents = 1
+    refreshPeriod   = "168h"
+
+# fzf-tab replaces zsh's completion menu with an fzf picker (with previews).
+# Loaded before the plugins above; ordering is handled in ~/.zshrc.
+[".local/share/zsh/plugins/fzf-tab"]
+    type            = "archive"
+    url             = "https://github.com/Aloxaf/fzf-tab/archive/refs/heads/master.tar.gz"
+    exact           = true
+    stripComponents = 1
+    refreshPeriod   = "168h"
+
+{{- if not .headless }}
+
+# ─── JetBrainsMono Nerd Font — workstations only ─────────────────────────────
+# Glyphs render client-side, so a headless box never needs these. Set the same
+# font in your terminal emulator for starship's icons to appear.
+[".local/share/fonts/JetBrainsMonoNerdFont"]
+    type          = "archive"
+    url           = "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/JetBrainsMono.zip"
+    exact         = true
+    refreshPeriod = "8760h"
+    include       = ["JetBrainsMonoNerdFont-Regular.ttf", "JetBrainsMonoNerdFont-Bold.ttf", "JetBrainsMonoNerdFont-Italic.ttf", "JetBrainsMonoNerdFont-BoldItalic.ttf"]
+{{- end }}

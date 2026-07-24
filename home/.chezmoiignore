@@ -1,0 +1,39 @@
+{{/*
+  Evaluated as a template on every apply: decides, per machine, what NOT to
+  materialise. Anything listed here is left untouched in the target directory.
+*/}}
+
+# ─── Fonts: only where a terminal emulator actually renders glyphs ───────────
+{{- if .headless }}
+.local/share/fonts
+{{- end }}
+
+# ─── Work git identity: only when a work email was configured ────────────────
+{{- if not .workEmail }}
+.config/git/config-work
+{{- end }}
+
+# ─── SSH commit signing allow-list: only when signing is on ──────────────────
+{{- if not (and .gpgSign .signingKey) }}
+.config/git/allowed_signers
+{{- end }}
+
+# ─── Multiplexer: ship only the one this machine uses ────────────────────────
+{{- if ne .multiplexer "tmux" }}
+.config/tmux
+{{- end }}
+{{- if ne .multiplexer "zellij" }}
+.config/zellij
+{{- end }}
+
+# ─── Secrets drop-in: only when a password-manager backend is configured ─────
+# Without this guard the template would call `op`/`bw` on a machine that has
+# neither, and the whole apply would fail.
+{{- if eq .secretsBackend "none" }}
+.config/shell/secrets.sh
+{{- end }}
+
+# ─── Neovim: a `minimal` box gets the vi-compatible fallback only ────────────
+{{- if eq .toolset "minimal" }}
+.config/nvim
+{{- end }}

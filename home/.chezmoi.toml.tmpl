@@ -1,0 +1,76 @@
+{{/*
+  Interactive first-run setup.
+
+  Answers persist to ~/.config/chezmoi/chezmoi.toml and the *Once helpers never
+  re-ask, so `chezmoi init` on a second machine, a re-init, or a CI run stays
+  quiet as long as the answers are supplied once (or via --prompt* flags).
+
+  Every prompt has a sane default so a fully non-interactive install works:
+      chezmoi init --apply --promptString name="..." ...
+*/}}
+
+{{- $name    := promptStringOnce . "name"   "Full name (git author)" -}}
+{{- $email   := promptStringOnce . "email"  "Primary git email" -}}
+{{- $editor  := promptStringOnce . "editor" "Preferred editor" "nvim" -}}
+
+{{/* Machine profile drives nearly every conditional in this repo:
+     workstation = full toolchain + fonts + multiplexer autostart
+     server      = headless, no fonts, no autostart, lean tool set
+     container   = ephemeral; skip chsh, skip fonts, skip multiplexer      */}}
+{{- $defaultProfile := "workstation" -}}
+{{- if or (env "CODESPACES") (env "REMOTE_CONTAINERS") (stat "/.dockerenv") -}}
+{{-   $defaultProfile = "container" -}}
+{{- else if not (env "DISPLAY") -}}
+{{-   $defaultProfile = "server" -}}
+{{- end -}}
+{{- $profile := promptChoiceOnce . "profile" "Machine profile" (list "workstation" "server" "container") $defaultProfile -}}
+
+{{/* Tool tiers. `minimal` keeps a slow/small box usable; `full` adds cloud+k8s. */}}
+{{- $toolset := promptChoiceOnce . "toolset" "Tool set" (list "minimal" "standard" "full") (eq $profile "workstation" | ternary "full" "standard") -}}
+
+{{- $multiplexer := promptChoiceOnce . "multiplexer" "Terminal multiplexer" (list "tmux" "zellij" "none") "tmux" -}}
+
+{{/* Secrets come from a password manager at apply time; nothing sensitive is
+     ever committed. See docs/SECRETS.md. */}}
+{{- $secretsBackend := promptChoiceOnce . "secretsBackend" "Secrets backend" (list "none" "1password" "bitwarden") "none" -}}
+
+{{- $gpgSign    := promptBoolOnce   . "gpgSign"    "Enable SSH commit signing" false -}}
+{{- $signingKey := promptStringOnce . "signingKey" "SSH signing key (path or 'key::ssh-ed25519 ...'; blank to skip)" "" -}}
+{{- $workEmail  := promptStringOnce . "workEmail"  "Work email for repos under ~/work/ (blank to skip)" "" -}}
+
+{{/* Nerd Font glyphs render client-side, so only a machine with a real terminal
+     emulator needs the font files. Detected, still overridable. */}}
+{{- $headless := promptBoolOnce . "headless" "Headless host? (skip Nerd Fonts)" (ne $profile "workstation") -}}
+
+[data]
+    name           = {{ $name           | quote }}
+    email          = {{ $email          | quote }}
+    editor         = {{ $editor         | quote }}
+    profile        = {{ $profile        | quote }}
+    toolset        = {{ $toolset        | quote }}
+    multiplexer    = {{ $multiplexer    | quote }}
+    secretsBackend = {{ $secretsBackend | quote }}
+    signingKey     = {{ $signingKey     | quote }}
+    workEmail      = {{ $workEmail      | quote }}
+    gpgSign        = {{ $gpgSign }}
+    headless       = {{ $headless }}
+
+[diff]
+    # `chezmoi diff` uses its own colored differ, so it works before mise has
+    # installed delta. Pager stays off so diffs compose with other commands.
+    pager = ""
+
+[status]
+    exclude = ["scripts"]
+
+{{- if eq $secretsBackend "1password" }}
+
+[onepassword]
+    # `op` must be signed in (`eval $(op signin)`) before `chezmoi apply`.
+    command = "op"
+{{- else if eq $secretsBackend "bitwarden" }}
+
+[bitwarden]
+    # `bw unlock` and export BW_SESSION before `chezmoi apply`.
+    command = "bw"
+{{- end }}

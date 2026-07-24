@@ -1,0 +1,52 @@
+# Declarative base-package lists, consumed by
+# .chezmoiscripts/run_once_before_00-install-packages.sh.tmpl
+#
+# Keep this to the *base OS layer only*: shell, vcs, fetchers, build deps,
+# locale, and the handful of tools mise cannot bootstrap itself.
+#
+# Every modern CLI (eza/bat/fd/ripgrep/fzf/zoxide/delta/jq/gh/lazygit/k9s/...)
+# is installed by mise instead, so binary names are identical on every distro —
+# no Debian `batcat`/`fdfind` rename, no EPEL hunting on RHEL, no version skew
+# between a 3-year-old Debian stable and a rolling Arch box.
+
+[packages.base]
+# Debian / Ubuntu
+apt = [
+    "zsh", "git", "curl", "wget", "ca-certificates", "gnupg",
+    "unzip", "tar", "gzip", "xz-utils",
+    "locales", "fontconfig", "build-essential",
+    "procps", "file", "less", "openssh-client",
+]
+
+# Alpine — /bin/sh is BusyBox ash, so pull real bash + coreutils.
+# shadow  -> chsh(1);  gcompat -> glibc shim for mise-installed binaries.
+apk = [
+    "zsh", "git", "curl", "wget", "ca-certificates", "gnupg",
+    "unzip", "tar", "gzip", "xz",
+    "fontconfig", "bash", "coreutils", "shadow", "gcompat", "build-base",
+    "procps", "file", "less", "openssh-client",
+]
+
+# RHEL / Rocky / Alma / Fedora — base + AppStream only, no EPEL required.
+dnf = [
+    "zsh", "git", "curl", "ca-certificates", "gnupg2",
+    "unzip", "tar", "gzip", "xz",
+    "glibc-langpack-en", "fontconfig", "gcc", "gcc-c++", "make",
+    "util-linux-user", "procps-ng", "file", "less", "openssh-clients",
+]
+
+# Arch / Manjaro
+pacman = [
+    "zsh", "git", "curl", "wget", "ca-certificates", "gnupg",
+    "unzip", "tar", "gzip", "xz",
+    "fontconfig", "base-devel",
+    "procps-ng", "file", "less", "openssh",
+]
+
+# openSUSE
+zypper = [
+    "zsh", "git", "curl", "wget", "ca-certificates", "gpg2",
+    "unzip", "tar", "gzip", "xz",
+    "glibc-locale", "fontconfig", "gcc", "gcc-c++", "make",
+    "procps", "file", "less", "openssh-clients",
+]

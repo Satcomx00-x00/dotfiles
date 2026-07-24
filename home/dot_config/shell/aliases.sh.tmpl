@@ -1,0 +1,169 @@
+# shellcheck shell=sh
+# ~/.config/shell/aliases.sh — aliases shared by bash and zsh.
+#
+# POSIX only. Every alias that depends on a modern CLI is guarded, so this file
+# degrades cleanly on a stock server where none of them are installed yet.
+
+# ─── Navigation ──────────────────────────────────────────────────────────────
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias -- -='cd -'
+
+# ─── Listing: eza when available, coreutils ls otherwise ─────────────────────
+if command -v eza >/dev/null 2>&1; then
+    alias ls='eza --group-directories-first --icons=auto'
+    alias ll='eza -l --group-directories-first --icons=auto --git --time-style=long-iso'
+    alias la='eza -la --group-directories-first --icons=auto --git --time-style=long-iso'
+    alias lt='eza --tree --level=2 --group-directories-first --icons=auto'
+    alias ltt='eza --tree --level=4 --group-directories-first --icons=auto'
+    alias lsize='eza -l --sort=size --reverse --icons=auto'
+    alias lmod='eza -l --sort=modified --reverse --icons=auto --time-style=long-iso'
+else
+    # GNU ls understands --color; BusyBox/BSD ls does not and would error out,
+    # so probe once here rather than shipping an alias that breaks on Alpine.
+    if ls --color=auto . >/dev/null 2>&1; then
+        alias ls='ls --color=auto'
+    fi
+    alias ll='ls -lh'
+    alias la='ls -lAh'
+    alias lt='ls -lhtr'
+fi
+
+# ─── cat / less: bat when available ──────────────────────────────────────────
+if command -v bat >/dev/null 2>&1; then
+    alias cat='bat --paging=never'
+    alias catp='bat --paging=never --plain'   # no line numbers, pipe-friendly
+    alias less='bat --paging=always'
+fi
+
+# ─── grep / find ─────────────────────────────────────────────────────────────
+alias grep='grep --color=auto'
+alias egrep='grep -E --color=auto'
+alias fgrep='grep -F --color=auto'
+command -v rg >/dev/null 2>&1 && alias rga='rg --hidden --no-ignore --glob "!.git"'
+command -v fd >/dev/null 2>&1 && alias fda='fd --hidden --no-ignore --exclude .git'
+
+# ─── Safety rails ────────────────────────────────────────────────────────────
+# -i on rm/cp/mv only affects INTERACTIVE use; scripts calling /bin/rm are
+# unaffected because aliases are not expanded in non-interactive shells.
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+alias mkdir='mkdir -p'
+alias ln='ln -i'
+# --preserve-root is GNU-only; BusyBox coreutils would reject it outright.
+if chown --help 2>&1 | grep -q -- --preserve-root; then
+    alias chown='chown --preserve-root'
+    alias chmod='chmod --preserve-root'
+fi
+
+# ─── Disk / system ───────────────────────────────────────────────────────────
+alias df='df -h'
+alias du='du -h'
+alias free='free -h'
+command -v duf  >/dev/null 2>&1 && alias df='duf'
+command -v dust >/dev/null 2>&1 && alias du='dust'
+command -v btop >/dev/null 2>&1 && alias top='btop'
+command -v procs >/dev/null 2>&1 && alias ps='procs'
+
+alias path='printf "%s\n" $PATH | tr ":" "\n"'
+alias now='date "+%Y-%m-%d %H:%M:%S"'
+alias utc='date -u "+%Y-%m-%dT%H:%M:%SZ"'
+alias ports='ss -tulpn 2>/dev/null || netstat -tulpn'
+alias myip='curl -fsSL https://ifconfig.me && echo'
+
+# ─── Git ─────────────────────────────────────────────────────────────────────
+# Deliberately short set. Anything more elaborate lives as a git alias in
+# ~/.config/git/config, so it works over plain `git` on machines without these.
+alias g='git'
+alias gs='git status -sb'
+alias ga='git add'
+alias gaa='git add -A'
+alias gc='git commit'
+alias gcm='git commit -m'
+alias gca='git commit --amend --no-edit'
+alias gco='git checkout'
+alias gsw='git switch'
+alias gb='git branch'
+alias gd='git diff'
+alias gds='git diff --staged'
+alias gl='git log --graph --abbrev-commit --decorate --format=format:"%C(bold blue)%h%C(reset) %C(auto)%d%C(reset) %s %C(dim white)(%an, %ar)%C(reset)"'
+alias gp='git push'
+alias gpl='git pull --rebase --autostash'
+alias gf='git fetch --all --prune'
+alias gst='git stash'
+alias gstp='git stash pop'
+command -v lazygit >/dev/null 2>&1 && alias lg='lazygit'
+
+{{- if ne .toolset "minimal" }}
+
+# ─── Containers ──────────────────────────────────────────────────────────────
+if command -v docker >/dev/null 2>&1; then
+    alias d='docker'
+    alias dps='docker ps --format "table {{`{{.Names}}`}}\t{{`{{.Status}}`}}\t{{`{{.Ports}}`}}"'
+    alias dpsa='docker ps -a --format "table {{`{{.Names}}`}}\t{{`{{.Status}}`}}\t{{`{{.Image}}`}}"'
+    alias di='docker images'
+    alias dex='docker exec -it'
+    alias dlog='docker logs -f --tail=100'
+    alias dprune='docker system prune -af --volumes'
+    alias dc='docker compose'
+    alias dcu='docker compose up -d'
+    alias dcd='docker compose down'
+    alias dcl='docker compose logs -f --tail=100'
+fi
+command -v lazydocker >/dev/null 2>&1 && alias ld='lazydocker'
+{{- end }}
+
+{{- if eq .toolset "full" }}
+
+# ─── Kubernetes ──────────────────────────────────────────────────────────────
+if command -v kubectl >/dev/null 2>&1; then
+    alias k='kubectl'
+    alias kg='kubectl get'
+    alias kd='kubectl describe'
+    alias kgp='kubectl get pods -o wide'
+    alias kgs='kubectl get svc'
+    alias kgn='kubectl get nodes -o wide'
+    alias kga='kubectl get all -A'
+    alias kl='kubectl logs -f --tail=100'
+    alias kex='kubectl exec -it'
+    alias kaf='kubectl apply -f'
+    alias kdf='kubectl delete -f'
+    alias kctx='kubectl config use-context'
+    alias kns='kubectl config set-context --current --namespace'
+fi
+
+# ─── Terraform / OpenTofu ────────────────────────────────────────────────────
+if command -v terraform >/dev/null 2>&1; then
+    alias tf='terraform'
+    alias tfi='terraform init'
+    alias tfp='terraform plan'
+    alias tfa='terraform apply'
+    alias tfd='terraform destroy'
+    alias tff='terraform fmt -recursive'
+    alias tfv='terraform validate'
+fi
+{{- end }}
+
+# ─── Dotfiles management (chezmoi) ───────────────────────────────────────────
+if command -v chezmoi >/dev/null 2>&1; then
+    alias cm='chezmoi'
+    alias cme='chezmoi edit --apply'
+    alias cma='chezmoi apply'
+    alias cmd='chezmoi diff'
+    alias cmu='chezmoi update'
+    alias cmcd='cd "$(chezmoi source-path)"'
+fi
+
+# ─── Misc quality of life ────────────────────────────────────────────────────
+alias reload='exec "$SHELL" -l'
+alias please='sudo'
+alias sudoe='sudo -E '            # trailing space: expands the NEXT alias too
+alias watch='watch '              # same trick, so `watch kgp` works
+alias h='history'
+alias c='clear'
+alias e='$EDITOR'
+alias serve='python3 -m http.server 8000'
+alias jsonpp='jq .'
+alias urlencode='python3 -c "import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))"'
