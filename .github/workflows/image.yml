@@ -1,0 +1,165 @@
+name: image
+
+# Decision #36: the full toolchain, pre-baked and published.
+#
+# Deliberately NOT a job in ci.yml. That workflow runs on every push to every
+# branch and is minimal by decision #23; a multi-gigabyte full-tier build has no
+# business on that path. This one runs on main, or on demand.
+#
+# Actions are pinned by commit SHA for the reason given in ci.yml.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Containerfile"
+      - ".dockerignore"
+      - "home/**"
+      - "test/**"
+      - ".github/workflows/image.yml"
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: "Tool tier to bake"
+        type: choice
+        options: [full, standard, minimal]
+        default: full
+      base:
+        description: "Base image"
+        type: string
+        default: "debian:latest"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: build and push
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      TIER: ${{ inputs.tier || 'full' }}
+      BASE: ${{ inputs.base || 'debian:latest' }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # A full-tier image carries Go, Rust, the AWS CLI, Terraform, the k8s
+      # tools and ~65 others. The hosted runner ships ~25 GB of preinstalled
+      # SDKs this build will never touch, and /var/lib/docker runs out of space
+      # part-way through the apply without reclaiming them first.
+      - name: Reclaim runner disk
+        run: |
+          before=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /usr/local/.ghcup \
+            /usr/local/share/boost \
+            "${AGENT_TOOLSDIRECTORY:-/nonexistent}" 2>/dev/null || true
+          after=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
+          printf 'free disk: %sG -> %sG\n' "$before" "$after"
+
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      # `github.repository` is `Satcomx00-x00/dotfiles`, and a GHCR reference
+      # must be lowercase — a hand-built tag fails with "repository name must be
+      # lowercase". metadata-action lowercases it, which is the main reason it
+      # is here rather than a printf.
+      - name: Tags and labels
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ inputs.tier || 'full' }}
+            type=sha,format=short
+          labels: |
+            org.opencontainers.image.title=dotfiles
+            org.opencontainers.image.description=Pre-baked ${{ inputs.tier || 'full' }}-tier dotfiles environment on ${{ inputs.base || 'debian:latest' }}
+            org.opencontainers.image.licenses=MIT
+
+      # Built and loaded, NOT pushed. Nothing reaches the registry before the
+      # assertions below have run against the actual image.
+      #
+      # Single-platform (amd64) because `load: true` cannot load a multi-arch
+      # manifest into the daemon, and the assert step needs a runnable image.
+      - name: Build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: Containerfile
+          build-args: |
+            BASE=${{ env.BASE }}
+            PROFILE=container
+            TIER=${{ env.TIER }}
+          load: true
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
+          provenance: false
+
+      # The repository's own post-apply assertions — the same test/assert.sh
+      # that ci.yml's apply job runs — pointed at the built image instead of a
+      # fresh bootstrap. The image therefore cannot pass a weaker test than a
+      # real machine does.
+      #
+      # The source is mounted because the Containerfile runs `chezmoi purge`,
+      # so /src does not survive into the image; assert.sh reads tools.toml and
+      # identity.toml from it to derive what to check.
+      - name: Assert the image
+        run: |
+          tag=$(printf '%s\n' '${{ steps.meta.outputs.tags }}' | head -1)
+          printf 'asserting %s\n' "$tag"
+          docker run --rm \
+            -v "$PWD:/src:ro" \
+            -e DOTFILES_TEST_PROFILE=container \
+            -e "DOTFILES_TEST_TIER=${TIER}" \
+            -e ZELLIJ_SKIP=1 \
+            -e HOME=/root \
+            "$tag" sh /src/test/assert.sh
+
+      - name: Log in to GHCR
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # A plain push of the already-built image. Re-running build-push-action
+      # with push:true would re-resolve the whole graph; the image is in the
+      # daemon already, so this only uploads layers.
+      - name: Push
+        run: |
+          printf '%s\n' '${{ steps.meta.outputs.tags }}' | while read -r tag; do
+            [ -n "$tag" ] || continue
+            printf '── pushing %s\n' "$tag"
+            docker push "$tag"
+          done
+
+      - name: Summary
+        run: |
+          {
+            printf '## Image published\n\n'
+            printf '| | |\n|---|---|\n'
+            printf '| Base | `%s` |\n' "$BASE"
+            printf '| Tier | `%s` |\n' "$TIER"
+            printf '| Profile | `container` |\n'
+            printf '| Platform | `linux/amd64` |\n'
+            printf '| Size | `%s` |\n' \
+              "$(docker image inspect "$(printf '%s\n' '${{ steps.meta.outputs.tags }}' | head -1)" \
+                 --format '{{ .Size }}' | awk '{ printf "%.2f GB", $1/1024/1024/1024 }')"
+            printf '\n### Tags\n\n```\n%s\n```\n' '${{ steps.meta.outputs.tags }}'
+            printf '\n```sh\ndocker run --rm -it ghcr.io/%s:latest\n```\n' \
+              "$(printf '%s' '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          } >> "$GITHUB_STEP_SUMMARY"

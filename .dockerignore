@@ -24,3 +24,8 @@ Thumbs.db
 
 # Test artifacts
 *.test
+
+# Build output from the test harness. Untracked (see .gitignore) but ~2.4 MB of
+# rendered templates, and every `make check` changes it — which would bust the
+# COPY layer cache on a multi-gigabyte image for no reason.
+.build/

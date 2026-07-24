@@ -11,10 +11,19 @@
 #
 # Also the base for .devcontainer/devcontainer.json (Codespaces, VS Code).
 
-FROM debian:12-slim
+# Base image. Floats, per decision #20 — `debian:latest` is Debian 13 (trixie)
+# today. The published GHCR image is built from this default; .devcontainer
+# pins its own args. Note this widens report.md §13, which says "Debian slim".
+ARG BASE=debian:latest
+FROM ${BASE}
 
 # The `container` profile: no fonts, no terminal emulator config, no chsh (the
 # image sets the shell below), no Zellij autostart. See report.md §3.
+#
+# TIER defaults to standard for a local `docker build` and the devcontainer;
+# the published image is built at `full`, which is an off-diagonal combination
+# (container + full) that IMPLEMENTATION.md §9 lists as rendered but never
+# sandboxed. The publish workflow's assert step is the first thing to exercise it.
 ARG PROFILE=container
 ARG TIER=standard
 
