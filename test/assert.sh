@@ -98,14 +98,45 @@ elif [ -f /src/home/.chezmoidata/tools.toml ]; then
     case "${DOTFILES_TEST_TIER:-standard}" in
         minimal) rank=0 ;; standard) rank=1 ;; full) rank=2 ;;
     esac
+    # Mirrors the selection in dot_config/mise/config.toml.tmpl exactly:
+    # `rank <= tierRank`, minus the WSL-only entries (decision #41). If these
+    # two ever disagree, the image installs one set and this asserts another.
+    #
+    # POSIX awk has no backreferences in sub(), so the quoted value is pulled
+    # out with match()/substr() rather than a capture group.
     bins=$(awk -v want="$rank" '
-        function rankof(t) { return t == "minimal" ? 0 : (t == "standard" ? 1 : 2) }
-        /^\[\[tool\]\]/ { name=""; bin=""; tier=""; next }
-        /^[[:space:]]*name[[:space:]]*=/ { name=$0; sub(/.*"([^"]*)".*/, "\\1", name) }
-        /^[[:space:]]*bin[[:space:]]*=/  { bin=$0;  sub(/.*"([^"]*)".*/, "\\1", bin) }
-        /^[[:space:]]*tier[[:space:]]*=/ { tier=$0; sub(/.*"([^"]*)".*/, "\\1", tier) }
-        /^$/ { if (name != "" && rankof(tier) <= want) print (bin != "" ? bin : name) }
+        function qval(line) {
+            if (match(line, /"[^"]*"/)) return substr(line, RSTART + 1, RLENGTH - 2)
+            return ""
+        }
+        function qlist(line,   out, s) {
+            out = ""; s = line
+            while (match(s, /"[^"]*"/)) {
+                out = out (out == "" ? "" : " ") substr(s, RSTART + 1, RLENGTH - 2)
+                s = substr(s, RSTART + RLENGTH)
+            }
+            return out
+        }
+        function emit() {
+            if (name != "" && rank >= 0 && rank <= want && when != "wsl")
+                print (bin != "" ? bin : name) (extra != "" ? " " extra : "")
+            name = ""; bin = ""; extra = ""; when = ""; rank = -1
+        }
+        BEGIN { name = ""; bin = ""; extra = ""; when = ""; rank = -1 }
+        /^\[\[tools\.list\]\]/           { emit(); next }
+        /^[[:space:]]*name[[:space:]]*=/ { name  = qval($0) }
+        /^[[:space:]]*bins[[:space:]]*=/ { extra = qlist($0) }
+        /^[[:space:]]*bin[[:space:]]*=/  { bin   = qval($0) }
+        /^[[:space:]]*when[[:space:]]*=/ { when  = qval($0) }
+        /^[[:space:]]*rank[[:space:]]*=/ {
+            r = $0; sub(/^[^=]*=[[:space:]]*/, "", r); rank = r + 0
+        }
+        END { emit() }
     ' /src/home/.chezmoidata/tools.toml)
+
+    # A parser that silently matches nothing reports "every tool is on PATH"
+    # while checking none of them — which is what the previous version did.
+    [ -n "$bins" ] || no 'tools.toml parser returned no tools (parser is broken)'
     missing=''
     for b in $bins; do
         command -v "$b" > /dev/null 2>&1 || missing="$missing $b"
