@@ -170,7 +170,7 @@ independent, so a small VPS can be a `server` on `minimal`.
 | `bash-language-server` | shell LSP | standard | `npm:bash-language-server` |
 | `basedpyright` | Python LSP | standard | `npm:basedpyright` |
 | `docker-langserver` | Dockerfile LSP | standard | `npm:dockerfile-language-server-nodejs` |
-| `gopls` | Go LSP | full | `aqua:golang/tools/gopls` |
+| `gopls` | Go LSP | full | `go:golang.org/x/tools/gopls` |
 | `golangci-lint` | Go linter aggregate | full | `aqua:golangci/golangci-lint` |
 | `gofumpt` | stricter gofmt | full | `aqua:mvdan/gofumpt` |
 | `rust-analyzer` | Rust LSP | full | `aqua:rust-lang/rust-analyzer` |
