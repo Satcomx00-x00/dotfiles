@@ -1,0 +1,8 @@
+# ~/.bash_profile — bash login shells.
+#
+# bash reads this INSTEAD of ~/.profile when it exists, and does not read
+# ~/.bashrc for a login shell. Both are wired up here, which is the whole job of
+# this file: a login bash and an interactive bash end up identical.
+
+[ -r "$HOME/.profile" ] && . "$HOME/.profile"
+[ -r "$HOME/.bashrc" ] && . "$HOME/.bashrc"

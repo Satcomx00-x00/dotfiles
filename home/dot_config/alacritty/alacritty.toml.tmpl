@@ -1,0 +1,95 @@
+{{- $p := .theme.palette -}}
+{{- $a := .theme.ansi -}}
+{{- $u := .theme.ui -}}
+# ~/.config/alacritty/alacritty.toml — generated from .chezmoidata/theme.toml.
+#
+# Secondary emulator (report.md §7.14); Ghostty is primary. Same palette, same
+# font, same OSC52 behaviour, so switching between them changes nothing visible.
+
+[general]
+live_config_reload = true
+
+[env]
+TERM = "alacritty"
+
+[font]
+size = 13.0
+[font.normal]
+family = "JetBrainsMono Nerd Font"
+style = "Regular"
+[font.bold]
+family = "JetBrainsMono Nerd Font"
+style = "Bold"
+[font.italic]
+family = "JetBrainsMono Nerd Font"
+style = "Italic"
+[font.bold_italic]
+family = "JetBrainsMono Nerd Font"
+style = "Bold Italic"
+
+[window]
+padding = { x = 8, y = 4 }
+dynamic_padding = true
+decorations = "full"
+opacity = 1.0
+dynamic_title = true
+
+[scrolling]
+history = 100000
+multiplier = 3
+
+[colors.primary]
+background = "{{ $p.bg }}"
+foreground = "{{ $p.fg }}"
+dim_foreground = "{{ $p.fg_dark }}"
+bright_foreground = "{{ $p.fg }}"
+
+[colors.cursor]
+text = "{{ $u.cursor_text }}"
+cursor = "{{ $u.cursor }}"
+
+[colors.selection]
+text = "{{ $u.selection_fg }}"
+background = "{{ $u.selection_bg }}"
+
+[colors.normal]
+black = "{{ $a.black }}"
+red = "{{ $a.red }}"
+green = "{{ $a.green }}"
+yellow = "{{ $a.yellow }}"
+blue = "{{ $a.blue }}"
+magenta = "{{ $a.magenta }}"
+cyan = "{{ $a.cyan }}"
+white = "{{ $a.white }}"
+
+[colors.bright]
+black = "{{ $a.bright_black }}"
+red = "{{ $a.bright_red }}"
+green = "{{ $a.bright_green }}"
+yellow = "{{ $a.bright_yellow }}"
+blue = "{{ $a.bright_blue }}"
+magenta = "{{ $a.bright_magenta }}"
+cyan = "{{ $a.bright_cyan }}"
+white = "{{ $a.bright_white }}"
+
+[cursor]
+style = { shape = "Block", blinking = "Off" }
+unfocused_hollow = true
+
+[mouse]
+hide_when_typing = true
+
+[terminal]
+# Decision #24 — OSC52 write access, so a remote yank reaches this machine's
+# clipboard. Alacritty refuses OSC52 READS by design, and so do we: see the
+# comment in nvim's clipboard provider.
+osc52 = "CopyPaste"
+
+[keyboard]
+bindings = [
+  { key = "C", mods = "Control|Shift", action = "Copy" },
+  { key = "V", mods = "Control|Shift", action = "Paste" },
+  { key = "Plus", mods = "Control", action = "IncreaseFontSize" },
+  { key = "Minus", mods = "Control", action = "DecreaseFontSize" },
+  { key = "Key0", mods = "Control", action = "ResetFontSize" },
+]

@@ -1,0 +1,13 @@
+# Repo-local development toolchain.
+#
+# This is NOT the toolchain this repo installs onto a machine — that lives in
+# home/.chezmoidata/tools.toml and is templated into ~/.config/mise/config.toml.
+# This file exists so `make lint` uses the same linter versions everywhere,
+# including CI (decision #45: one binary, every consumer).
+
+[tools]
+shellcheck = "latest"
+shfmt      = "latest"
+stylua     = "latest"
+taplo      = "latest"
+hyperfine  = "latest"

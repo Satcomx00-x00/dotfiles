@@ -1,0 +1,88 @@
+" ~/.vimrc — the fallback.
+"
+" Deliberately minimal and plugin-free (report.md §7.7). This exists for the box
+" where zsh is not installed, mise never ran, and `vi` is genuinely all there
+" is — a rescue shell, a vendor appliance, a container someone else built.
+"
+" It must therefore work on stock vim, and on the vi-compatible BusyBox build,
+" without a single external file. Nothing here is templated for the same reason.
+
+set nocompatible
+filetype plugin indent on
+syntax on
+
+" ── Display ───────────────────────────────────────────────────────────────────
+set number
+set relativenumber
+set ruler
+set showcmd
+set laststatus=2
+set scrolloff=5
+set sidescrolloff=8
+set display+=lastline
+set nowrap
+set list
+set listchars=tab:→\ ,trail:·,nbsp:␣
+
+" ── Editing ───────────────────────────────────────────────────────────────────
+set expandtab
+set shiftwidth=4
+set tabstop=4
+set softtabstop=4
+set autoindent
+set smartindent
+set backspace=indent,eol,start
+set hidden
+set confirm
+
+" ── Search ────────────────────────────────────────────────────────────────────
+set incsearch
+set hlsearch
+set ignorecase
+set smartcase
+nnoremap <silent> <Esc><Esc> :nohlsearch<CR>
+
+" ── Completion and the command line ───────────────────────────────────────────
+set wildmenu
+set wildmode=longest:full,full
+set wildignore+=*.o,*.pyc,*/.git/*,*/node_modules/*
+
+" ── Files ─────────────────────────────────────────────────────────────────────
+" No swap or backup droppings in whatever directory you happened to be in.
+set noswapfile
+set nobackup
+set nowritebackup
+if has('persistent_undo')
+    set undofile
+    set undodir=~/.cache/vim/undo
+    if !isdirectory(&undodir)
+        silent! call mkdir(&undodir, 'p', 0700)
+    endif
+endif
+
+" ── Keys ──────────────────────────────────────────────────────────────────────
+" Space leader, matching the Neovim config (decision #43), so the muscle memory
+" survives the trip to a machine that only has vim.
+let mapleader = ' '
+nnoremap <leader>w :w<CR>
+nnoremap <leader>q :q<CR>
+nnoremap <C-h> <C-w>h
+nnoremap <C-j> <C-w>j
+nnoremap <C-k> <C-w>k
+nnoremap <C-l> <C-w>l
+vnoremap < <gv
+vnoremap > >gv
+
+" Return to the last cursor position.
+augroup last_position
+    autocmd!
+    autocmd BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | execute "normal! g`\"" | endif
+augroup END
+
+" A 16-colour approximation of Tokyo Night's intent: dark background, so the
+" default highlight groups pick readable foregrounds.
+set background=dark
+if has('termguicolors') && $COLORTERM =~# 'truecolor\|24bit'
+    set termguicolors
+endif
+silent! colorscheme habamax

@@ -5,10 +5,16 @@
 # `chezmoi apply --refresh-externals`) re-pulls it. A plain `chezmoi apply`
 # never re-downloads, so day-to-day applies stay fast and work offline.
 #
-# Everything lands under XDG paths; ~/.zshrc sources them directly.
+# Why these are externals and not mise tools (report.md §10.2): they are sourced
+# FILES and asset paths, not PATH binaries. mise installs into versioned
+# directories, so ~/.zshrc would have to resolve a version-specific path at
+# startup — six `mise where` calls would blow the 60 ms budget on their own, and
+# fontconfig needs stable real paths.
+#
+# test/verify-externals.sh checks every URL here is still reachable.
 
 # ─── zsh-defer: the whole reason this setup has no plugin manager ─────────────
-# Queues a command to run after the first prompt is drawn. Startup cost of a
+# Queues a command to run after the first prompt is drawn. The startup cost of a
 # deferred plugin is ~0, so we get framework features at no framework price.
 [".local/share/zsh/plugins/zsh-defer"]
     type            = "archive"
@@ -17,7 +23,7 @@
     stripComponents = 1
     refreshPeriod   = "168h"
 
-# ─── Interactive plugins (all deferred; see ~/.zshrc step 7) ──────────────────
+# ─── Interactive plugins (all deferred; see ~/.zshrc) ────────────────────────
 [".local/share/zsh/plugins/zsh-autosuggestions"]
     type            = "archive"
     url             = "https://github.com/zsh-users/zsh-autosuggestions/archive/refs/heads/master.tar.gz"
@@ -49,7 +55,7 @@
     refreshPeriod   = "168h"
 
 # fzf-tab replaces zsh's completion menu with an fzf picker (with previews).
-# Loaded before the plugins above; ordering is handled in ~/.zshrc.
+# Load order relative to the others is handled in ~/.zshrc.
 [".local/share/zsh/plugins/fzf-tab"]
     type            = "archive"
     url             = "https://github.com/Aloxaf/fzf-tab/archive/refs/heads/master.tar.gz"
@@ -57,7 +63,34 @@
     stripComponents = 1
     refreshPeriod   = "168h"
 
-{{- if not .headless }}
+{{- if ge .tierRank 1 }}
+
+# ─── Zellij WASM plugins (decision #12) ──────────────────────────────────────
+# Left floating deliberately (open item #1): they build against Zellij's plugin
+# API, so when the pinned Zellij is bumped these may need attention together.
+# Downloaded as plain files — Zellij loads them from a path, not a registry.
+[".local/share/zellij/plugins/zjstatus.wasm"]
+    type          = "file"
+    url           = "https://github.com/dj95/zjstatus/releases/latest/download/zjstatus.wasm"
+    refreshPeriod = "672h"
+
+[".local/share/zellij/plugins/vim-zellij-navigator.wasm"]
+    type          = "file"
+    url           = "https://github.com/hiasr/vim-zellij-navigator/releases/latest/download/vim-zellij-navigator.wasm"
+    refreshPeriod = "672h"
+
+[".local/share/zellij/plugins/zellij-autolock.wasm"]
+    type          = "file"
+    url           = "https://github.com/fresh2dev/zellij-autolock/releases/latest/download/zellij-autolock.wasm"
+    refreshPeriod = "672h"
+
+[".local/share/zellij/plugins/room.wasm"]
+    type          = "file"
+    url           = "https://github.com/rvcas/room/releases/latest/download/room.wasm"
+    refreshPeriod = "672h"
+{{- end }}
+
+{{- if .fonts }}
 
 # ─── JetBrainsMono Nerd Font — workstations only ─────────────────────────────
 # Glyphs render client-side, so a headless box never needs these. Set the same
@@ -67,5 +100,10 @@
     url           = "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/JetBrainsMono.zip"
     exact         = true
     refreshPeriod = "8760h"
-    include       = ["JetBrainsMonoNerdFont-Regular.ttf", "JetBrainsMonoNerdFont-Bold.ttf", "JetBrainsMonoNerdFont-Italic.ttf", "JetBrainsMonoNerdFont-BoldItalic.ttf"]
+    include       = [
+        "JetBrainsMonoNerdFont-Regular.ttf",
+        "JetBrainsMonoNerdFont-Bold.ttf",
+        "JetBrainsMonoNerdFont-Italic.ttf",
+        "JetBrainsMonoNerdFont-BoldItalic.ttf",
+    ]
 {{- end }}

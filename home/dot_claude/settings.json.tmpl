@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "//": "Managed by chezmoi (decision #28). Edit the source, not this file.",
+  "env": {
+    "EDITOR": {{ .editor | quote }},
+    "PAGER": "less"
+  },
+  "permissions": {
+    "//": "Read-only inspection is always fine; anything that writes, installs or publishes is asked for.",
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(rg:*)",
+      "Bash(fd:*)",
+      "Bash(eza:*)",
+      "Bash(bat:*)",
+      "Bash(jq:*)",
+      "Bash(yq:*)",
+      "Bash(mise ls:*)",
+      "Bash(mise current:*)",
+      "Bash(chezmoi diff:*)",
+      "Bash(chezmoi status:*)",
+      "Bash(chezmoi execute-template:*)",
+      "Bash(make check)",
+      "Bash(make render)",
+      "Bash(make lint)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(chezmoi apply:*)",
+      "Bash(chezmoi forget:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(~/.ssh/id_*)",
+      "Read(~/.ssh/config.d/**)",
+      "Read(~/.config/shell/local.sh)",
+      "Read(~/.config/shell/secrets.sh)"
+    ]
+  },
+  "includeCoAuthoredBy": true
+}

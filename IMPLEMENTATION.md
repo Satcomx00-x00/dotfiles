@@ -506,7 +506,86 @@ introduces.
 
 ---
 
-## 10. Open items carried forward
+## 10. Build outcome
+
+Recorded after execution. Measured numbers, not targets.
+
+### 10.1 Gates, as built
+
+The plan called for four anti-drift gates (§8). Seven exist, because three
+defect classes turned up during the build that static checks could not see.
+
+| Gate | `make` target | Catches |
+| --- | --- | --- |
+| Render matrix + schema agreement | `render` | A template that breaks on one profile; fixtures drifting from the real prompt schema |
+| Lint | `lint` | shellcheck on rendered output, `zsh -n`/`bash -n`/`dash -n`, shfmt, stylua, taplo |
+| Help completeness | `lint-help` | An alias or function unreachable from `dotfiles help` |
+| Theme fan-out | `theme-check` | A config with hardcoded colours, or an undeclared consumer |
+| **Glyph integrity** | `lint` | *(new)* An icon assignment that is an empty string |
+| **Backend resolution** | `verify-tools` | *(new)* A `tools.toml` entry no backend can resolve, or a pin that no longer exists |
+| **External reachability** | `verify-externals` | *(new)* A dead download URL |
+| **KDL parse** | `verify-zellij` | *(new)* Config or layout the real Zellij rejects |
+| **Portable behaviour** | `verify-portable` | *(new)* `portable.sh` that is current but does not work |
+
+The last one exists because the freshness gate the plan specified — regenerate
+and diff — catches *stale* output and is blind to *wrong* output. That
+distinction stopped being theoretical (§10.3).
+
+### 10.2 Measured
+
+| Property | Target | Measured |
+| --- | --- | --- |
+| Interactive zsh startup | < 60 ms | **~20 ms marginal** (70.9 ms total against a 51 ms bare-shell floor in this environment) |
+| Neovim startup | ~25 ms | **30.6 ms total**, of which 11.5 ms is `nvim --clean` here — over target |
+| Templates rendered | — | 37 templates × 4 fixtures |
+| Tool backends verified | — | 71/71 resolve; both pins exist upstream |
+| External URLs verified | — | 11/11 reachable |
+| Theme consumers | 11 declared | **12 live, 0 pending** |
+| Help index | — | 213 entries: 87 aliases, 55 keymaps, 40 tools, 18 functions, 13 keybindings |
+| `portable.sh` | — | 545 lines, 53 aliases and 14 functions on a bare Debian |
+
+Neovim's 30.6 ms is above the 25 ms target and is reported as measured rather
+than adjusted. Most of the gap is `require('config.lazy')` at 18.5 ms, which is
+lazy.nvim plus the three plugins that cannot be lazy-loaded (colourscheme,
+snacks, lualine). Reducing it means loading fewer plugins at startup, not
+configuring them differently.
+
+### 10.3 Defects found by running things
+
+Every one of these passed template rendering, shellcheck and review. They were
+found only by executing the result, which is the argument for stage 0.
+
+| Defect | Found by | Now guarded by |
+| --- | --- | --- |
+| `--promptString` keys on the **prompt text**, not the data key — so every unattended install silently prompted and hung | Running `chezmoi init` non-interactively | `render`'s schema step, plus a targeted hint on failure |
+| Nerd Font glyphs written as raw bytes became **empty strings**; a zero-length `fillchars` stops Neovim starting at all | Headless Neovim run | `lint` glyph integrity; codepoints now written as `\u{...}` / `\UXXXXXXXX` escapes |
+| Generated help script double-quoted a description containing `` `room` `` — **shell command substitution in generated data** | Sandbox run printing `room: not found` | Replaced `printf` lines with a quoted heredoc |
+| `env.sh`'s trailing `return 0` ended the whole concatenated `portable.sh`, which shipped defining **zero aliases** | Sourcing it in a container | `verify-portable` |
+| Neovim sync reported success while the editor was erroring — `nvim --headless` exits 0 on a config throw | Comparing sync output to a manual run | Output inspection, narrowly matched after stripping ANSI |
+| `dotfiles doctor` reported `win32yank` missing on every non-WSL machine | Running `doctor` | `when` filtering, shared with the mise config template |
+| `dotfiles help <term>` matched everything — an awk filter concatenated fields instead of testing them | Running `dotfiles help git` | — |
+| `win32yank` has no aqua registry entry | `verify-tools` | The documented `github` fallback (#47) |
+
+### 10.4 Accepted limitations
+
+Beyond those already in `report.md` §16:
+
+1. **Buffer-local Neovim keymaps are absent from `dotfiles help`.**
+   `nvim_get_keymap` returns global maps only. gitsigns' `<leader>g` bindings
+   and all LSP bindings are registered by an `on_attach` that does not fire in a
+   headless Neovim — verified: gitsigns attaches (`b:gitsigns_head` is set) and
+   `on_attach` is never called. Attempted and removed rather than left as
+   machinery that returns nothing. Documented in `docs/CUSTOMIZING.md`.
+2. **`report.md` §6 phase 5 (a Zellij plugin script) does not exist.** The four
+   WASM plugins are chezmoi externals, which is declarative, cached and
+   refresh-aware. An imperative download script would be strictly worse.
+3. **Neovim startup is over target** — see §10.2.
+4. **The `full` tier on musl is unproven.** Alpine runs at `minimal` in CI,
+   consistent with decision #23.
+
+---
+
+## 11. Open items carried forward
 
 Unchanged from `report.md` §17 and not resolved by this plan:
 

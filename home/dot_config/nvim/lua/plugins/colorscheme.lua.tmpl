@@ -1,0 +1,75 @@
+{{- $p := .theme.palette -}}
+{{- $r := .theme.roles -}}
+{{- $u := .theme.ui -}}
+-- lua/plugins/colorscheme.lua — generated from .chezmoidata/theme.toml.
+--
+-- tokyonight.nvim already ships this palette, so why template anything? Because
+-- the OVERRIDES have to agree with the rest of the machine. When the palette
+-- changes, the prompt, the status bar, fzf, bat and this file must all move
+-- together — and the only way to guarantee that is for all of them to read the
+-- same source. test/theme-check.sh proves it on every run.
+
+return {
+  {
+    "folke/tokyonight.nvim",
+    lazy = false, -- a colourscheme that loads late is a visible flash
+    priority = 1000,
+    opts = {
+      style = "night",
+      transparent = false,
+      terminal_colors = true,
+      styles = {
+        comments = { italic = true },
+        keywords = { italic = true },
+        functions = {},
+        variables = {},
+        sidebars = "dark",
+        floats = "dark",
+      },
+      -- Every colour below comes from the data file. None is written twice.
+      on_colors = function(colors)
+        colors.bg = "{{ $p.bg }}"
+        colors.bg_dark = "{{ $p.bg_dark }}"
+        colors.bg_float = "{{ $p.bg_float }}"
+        colors.bg_highlight = "{{ $p.bg_highlight }}"
+        colors.bg_visual = "{{ $p.bg_visual }}"
+        colors.fg = "{{ $p.fg }}"
+        colors.fg_dark = "{{ $p.fg_dark }}"
+        colors.fg_gutter = "{{ $p.fg_gutter }}"
+        colors.comment = "{{ $p.comment }}"
+        colors.blue = "{{ $p.blue }}"
+        colors.cyan = "{{ $p.cyan }}"
+        colors.green = "{{ $p.green }}"
+        colors.magenta = "{{ $p.magenta }}"
+        colors.orange = "{{ $p.orange }}"
+        colors.purple = "{{ $p.purple }}"
+        colors.red = "{{ $p.red }}"
+        colors.yellow = "{{ $p.yellow }}"
+        colors.border = "{{ $u.border }}"
+        colors.git = {
+          add = "{{ $r.added }}",
+          change = "{{ $r.changed }}",
+          delete = "{{ $r.removed }}",
+        }
+      end,
+      on_highlights = function(hl, c)
+        -- Float borders match Zellij's pane borders, so a floating window and a
+        -- multiplexer pane read as the same kind of edge.
+        hl.FloatBorder = { fg = "{{ $u.border_active }}", bg = c.bg_float }
+        hl.NormalFloat = { bg = c.bg_float }
+        hl.WinSeparator = { fg = "{{ $u.border }}" }
+        hl.CursorLineNr = { fg = "{{ $r.accent }}", bold = true }
+        -- Diagnostics use the shared semantic roles, so an error is the same
+        -- red in the editor, the prompt and the status bar.
+        hl.DiagnosticError = { fg = "{{ $r.error }}" }
+        hl.DiagnosticWarn = { fg = "{{ $r.warning }}" }
+        hl.DiagnosticInfo = { fg = "{{ $r.info }}" }
+        hl.DiagnosticHint = { fg = "{{ $r.hint }}" }
+      end,
+    },
+    config = function(_, opts)
+      require("tokyonight").setup(opts)
+      vim.cmd.colorscheme("{{ .theme.nvim }}")
+    end,
+  },
+}

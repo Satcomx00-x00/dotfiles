@@ -1,0 +1,24 @@
+# Test fixture: an ephemeral container / Codespace on the minimal tier.
+#
+# Also the fixture portable.sh is generated from (stage 8): it is the leanest
+# combination, so anything that survives it is safe on a throwaway host.
+
+[data]
+    name           = "CI Tester"
+    email          = "ci@example.com"
+    editor         = "nvim"
+
+    profile        = "container"
+    tier           = "minimal"
+    tierRank       = 0
+
+    secretsBackend = "none"
+    gpgSign        = false
+    signingKey     = ""
+
+    fonts          = false
+    terminals      = false
+    autoAttach     = false
+    chsh           = false
+    staleness      = false
+    nodeHeapMB     = 2048

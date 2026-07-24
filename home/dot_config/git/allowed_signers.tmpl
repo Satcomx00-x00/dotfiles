@@ -1,0 +1,10 @@
+{{- /*
+  SSH signature allow-list. Only materialised when signing is explicitly on
+  (.chezmoiignore excludes it otherwise), because git errors on an empty or
+  malformed allowedSignersFile rather than ignoring it.
+
+  Format: <principal> <key-type> <public-key>
+*/ -}}
+{{- if and .gpgSign .signingKey }}
+{{ .email }} {{ if hasPrefix "ssh-" .signingKey }}{{ .signingKey }}{{ else }}{{ output "sh" "-c" (printf "cat '%s' 2>/dev/null || true" .signingKey) | trim }}{{ end }}
+{{- end }}

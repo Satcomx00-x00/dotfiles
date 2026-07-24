@@ -1,0 +1,12 @@
+{{- /* `zellij --layout ops` — the shape of an incident: shell, logs, resources. */ -}}
+layout {
+    tab name="ops" focus=true {
+        pane split_direction="horizontal" {
+            pane size="60%" split_direction="vertical" {
+                pane name="shell"
+                pane name="logs"
+            }
+            pane name="resources" command="btop"
+        }
+    }
+}

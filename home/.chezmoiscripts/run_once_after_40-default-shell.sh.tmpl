@@ -1,0 +1,48 @@
+{{- if .chsh -}}
+#!/bin/sh
+# Phase 8 — make zsh the login shell.
+#
+# Skipped entirely in containers (the image decides the shell there), which is
+# why the whole file sits inside a template conditional.
+#
+# OPTIONAL phase: warns and continues. There are several legitimate reasons
+# this cannot work — no chsh, a directory-backed passwd database (LDAP, SSSD),
+# a locked account, or no password to authenticate the change — and none of
+# them should stop a machine being configured. `chsh -s $(which zsh)` remains
+# available by hand.
+
+set -eu
+
+log() { printf '  shell: %s\n' "$*"; }
+
+ZSH_PATH=$(command -v zsh 2> /dev/null || true)
+
+[ -n "$ZSH_PATH" ] || {
+    log 'WARN zsh not installed — leaving the login shell alone'
+    exit 0
+}
+
+CURRENT=$(getent passwd "$(id -un)" 2> /dev/null | cut -d: -f7 || echo "${SHELL:-}")
+
+if [ "$CURRENT" = "$ZSH_PATH" ]; then
+    log "already $ZSH_PATH"
+    exit 0
+fi
+
+# chsh refuses any shell missing from /etc/shells. This is precisely why zsh
+# comes from the OS package manager and not from mise (report.md §10.2): a
+# mise-managed copy could never register here.
+if [ -r /etc/shells ] && ! grep -qx "$ZSH_PATH" /etc/shells; then
+    if [ "$(id -u)" -eq 0 ]; then
+        printf '%s\n' "$ZSH_PATH" >> /etc/shells
+    elif command -v sudo > /dev/null 2>&1; then
+        printf '%s\n' "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null 2>&1 || true
+    fi
+fi
+
+if command -v chsh > /dev/null 2>&1 && chsh -s "$ZSH_PATH" > /dev/null 2>&1; then
+    log "login shell is now $ZSH_PATH (takes effect on next login)"
+else
+    log "WARN could not change the login shell; run: chsh -s $ZSH_PATH"
+fi
+{{- end -}}

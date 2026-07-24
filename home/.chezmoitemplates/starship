@@ -1,0 +1,192 @@
+{{- /*
+  Starship prompt, shared by zsh and bash (decision #3).
+
+  Rendered TWICE from this one partial, with different glyph sets:
+    ~/.config/starship.toml        Nerd Font glyphs
+    ~/.config/starship-ascii.toml  plain ASCII, for a bare TTY or a terminal
+                                   without the font (report.md §8.6)
+
+  interactive.sh picks between them at runtime by looking at $TERM. Writing the
+  layout twice would guarantee the two drift; this way the fallback is the same
+  prompt with different characters.
+
+  Call with:  {{ template "starship" (dict "glyphs" "nerd" "theme" .theme) }}
+*/ -}}
+{{- $nerd := eq .glyphs "nerd" -}}
+{{- $p := .theme.palette -}}
+{{- $r := .theme.roles -}}
+# Generated from .chezmoidata/theme.toml — do not edit.
+# Layout: two lines with a right-side prompt (decision #44). Context on line
+# one, a clean input line below, and volatile information pushed right so it
+# never shifts the cursor. The input column is therefore constant, which is what
+# makes a long session scannable.
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+$username$hostname$container$directory$git_branch$git_state$git_status\
+$nodejs$python$golang$rust$terraform$kubernetes$aws\
+$line_break$character"""
+
+right_format = """$cmd_duration$status$time"""
+
+add_newline = true
+palette = 'tokyonight'
+command_timeout = 800
+
+[palettes.tokyonight]
+bg      = '{{ $p.bg }}'
+fg      = '{{ $p.fg }}'
+blue    = '{{ $p.blue }}'
+cyan    = '{{ $p.cyan }}'
+green   = '{{ $p.green }}'
+magenta = '{{ $p.magenta }}'
+orange  = '{{ $p.orange }}'
+purple  = '{{ $p.purple }}'
+red     = '{{ $p.red }}'
+yellow  = '{{ $p.yellow }}'
+muted   = '{{ $r.muted }}'
+accent  = '{{ $r.accent }}'
+urgent  = '{{ $r.urgent }}'
+ctx_ssh = '{{ $r.ctx_ssh }}'
+ctx_root = '{{ $r.ctx_root }}'
+ctx_k8s = '{{ $r.ctx_k8s }}'
+
+# ─── Context markers ─────────────────────────────────────────────────────────
+# Root is red, SSH is a distinct colour, a container is marked. These three
+# facts are the ones that make you type the wrong command on the wrong machine.
+[username]
+show_always = false
+format = '[$user]($style)[@](muted)'
+style_user = 'accent'
+style_root = 'bold ctx_root'
+
+[hostname]
+ssh_only = true
+format = '[$hostname]($style) '
+style = 'bold ctx_ssh'
+{{ if $nerd }}ssh_symbol = "\U000F08B9 "{{ else }}ssh_symbol = ""{{ end }}
+
+[container]
+{{ if $nerd }}format = "[\U000F0868 $name]($style) "{{ else }}format = '[($name)]($style) '{{ end }}
+style = 'bold cyan'
+
+# ─── Directory ───────────────────────────────────────────────────────────────
+[directory]
+truncation_length = 4
+truncate_to_repo = true
+style = 'bold blue'
+{{ if $nerd }}
+read_only = " \U000F033E"
+home_symbol = '~'
+{{ else }}
+read_only = ' [ro]'
+home_symbol = '~'
+{{ end }}
+format = '[$path]($style)[$read_only]($read_only_style) '
+
+# ─── Git ─────────────────────────────────────────────────────────────────────
+[git_branch]
+{{ if $nerd }}symbol = "\ue725 "{{ else }}symbol = 'git:'{{ end }}
+style = 'purple'
+format = '[$symbol$branch]($style) '
+
+[git_status]
+style = 'yellow'
+format = '([$all_status$ahead_behind]($style) )'
+conflicted = '='
+ahead = '⇡${count}'
+behind = '⇣${count}'
+diverged = '⇕⇡${ahead_count}⇣${behind_count}'
+untracked = '?${count}'
+stashed = '*${count}'
+modified = '!${count}'
+staged = '+${count}'
+renamed = '»${count}'
+deleted = '✘${count}'
+
+[git_state]
+style = 'bold red'
+format = '\([$state( $progress_current/$progress_total)]($style)\) '
+
+# ─── Language versions — only inside a project of that language ──────────────
+[nodejs]
+{{ if $nerd }}symbol = "\ue718 "{{ else }}symbol = 'node '{{ end }}
+style = 'green'
+format = '[$symbol($version)]($style) '
+detect_files = ['package.json', '.nvmrc', 'bun.lockb', 'bun.lock']
+
+[python]
+{{ if $nerd }}symbol = "\ue235 "{{ else }}symbol = 'py '{{ end }}
+style = 'yellow'
+format = '[$symbol($version)( \($virtualenv\))]($style) '
+
+[golang]
+{{ if $nerd }}symbol = "\ue627 "{{ else }}symbol = 'go '{{ end }}
+style = 'cyan'
+format = '[$symbol($version)]($style) '
+
+[rust]
+{{ if $nerd }}symbol = "\ue7a8 "{{ else }}symbol = 'rs '{{ end }}
+style = 'orange'
+format = '[$symbol($version)]($style) '
+
+[terraform]
+{{ if $nerd }}symbol = "\U000F1062 "{{ else }}symbol = 'tf '{{ end }}
+style = 'purple'
+format = '[$symbol$workspace]($style) '
+
+# ─── Kubernetes — the segment that stops you running against prod ────────────
+# Always shown when a kubeconfig is active, never hidden behind a detect rule.
+[kubernetes]
+disabled = false
+{{ if $nerd }}symbol = "\U000F10FE "{{ else }}symbol = 'k8s '{{ end }}
+style = 'bold ctx_k8s'
+format = '[$symbol$context( \($namespace\))]($style) '
+
+[aws]
+{{ if $nerd }}symbol = "\ue7ad "{{ else }}symbol = 'aws '{{ end }}
+style = 'orange'
+format = '[$symbol($profile)( \($region\))]($style) '
+
+# ─── Right side: volatile information, so the cursor column never moves ──────
+[cmd_duration]
+min_time = 2000
+style = 'muted'
+{{ if $nerd }}format = "[\U000F051F $duration]($style) "{{ else }}format = '[took $duration]($style) '{{ end }}
+
+[status]
+disabled = false
+style = 'bold red'
+{{ if $nerd }}format = "[\uf00d $status]($style) "{{ else }}format = '[x$status]($style) '{{ end }}
+map_symbol = false
+pipestatus = true
+
+[time]
+disabled = false
+style = 'muted'
+time_format = '%H:%M'
+format = '[$time]($style)'
+
+# ─── Line two: the input line, one character, always the same column ─────────
+[character]
+{{ if $nerd }}
+success_symbol = '[❯](bold green)'
+error_symbol = '[❯](bold red)'
+vimcmd_symbol = '[❮](bold green)'
+{{ else }}
+success_symbol = '[>](bold green)'
+error_symbol = '[>](bold red)'
+vimcmd_symbol = '[<](bold green)'
+{{ end }}
+
+# Modules deliberately off: they cost a subprocess each and say nothing this
+# prompt does not already say.
+[package]
+disabled = true
+[docker_context]
+disabled = true
+[memory_usage]
+disabled = true
+[battery]
+disabled = true

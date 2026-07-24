@@ -1,76 +1,106 @@
 {{/*
-  Interactive first-run setup.
+  First-run setup. Answers persist to ~/.config/chezmoi/chezmoi.toml and the
+  *Once helpers never re-ask, so a re-init, a second machine or a CI run stays
+  quiet as long as the answers were supplied once — or passed as flags:
 
-  Answers persist to ~/.config/chezmoi/chezmoi.toml and the *Once helpers never
-  re-ask, so `chezmoi init` on a second machine, a re-init, or a CI run stays
-  quiet as long as the answers are supplied once (or via --prompt* flags).
+      chezmoi init --apply --promptString name="..." --promptChoice profile=server ...
 
-  Every prompt has a sane default so a fully non-interactive install works:
-      chezmoi init --apply --promptString name="..." ...
+  Two ideas make this file worth reading:
+
+  1. Every prompt has a defensible default derived from the machine itself, so
+     the unattended path and the interactive path produce the same result.
+
+  2. The [data] block emits DERIVED values (fonts, autoAttach, chsh, ...) as
+     well as the raw answers. Consumers read the derived flag and never
+     re-derive it. One question, answered once, in one place — a template that
+     asks "is this a workstation?" for the fourth time is a template that will
+     eventually answer differently from the other three.
+
+  test/render.sh compares the keys emitted here against every fixture, so this
+  file and the test fixtures cannot drift apart.
 */}}
 
-{{- $name    := promptStringOnce . "name"   "Full name (git author)" -}}
-{{- $email   := promptStringOnce . "email"  "Primary git email" -}}
-{{- $editor  := promptStringOnce . "editor" "Preferred editor" "nvim" -}}
+{{- $name   := promptStringOnce . "name"   "Full name" -}}
+{{- $email  := promptStringOnce . "email"  "Email" -}}
+{{- $editor := promptStringOnce . "editor" "Editor" "nvim" -}}
 
-{{/* Machine profile drives nearly every conditional in this repo:
-     workstation = full toolchain + fonts + multiplexer autostart
-     server      = headless, no fonts, no autostart, lean tool set
-     container   = ephemeral; skip chsh, skip fonts, skip multiplexer      */}}
+{{/* ── Machine profile ──────────────────────────────────────────────────────
+     Auto-detected, still overridable. Drives nearly every conditional in the
+     repo (report.md §3):
+       workstation  real terminal emulator, fonts, full toolchain
+       server       headless, no fonts, no emulator config
+       container    ephemeral: no chsh, no fonts, no multiplexer autostart  */}}
 {{- $defaultProfile := "workstation" -}}
-{{- if or (env "CODESPACES") (env "REMOTE_CONTAINERS") (stat "/.dockerenv") -}}
+{{- if or (env "CODESPACES") (env "REMOTE_CONTAINERS") (stat "/.dockerenv") (stat "/run/.containerenv") -}}
 {{-   $defaultProfile = "container" -}}
 {{- else if not (env "DISPLAY") -}}
 {{-   $defaultProfile = "server" -}}
 {{- end -}}
 {{- $profile := promptChoiceOnce . "profile" "Machine profile" (list "workstation" "server" "container") $defaultProfile -}}
 
-{{/* Tool tiers. `minimal` keeps a slow/small box usable; `full` adds cloud+k8s. */}}
-{{- $toolset := promptChoiceOnce . "toolset" "Tool set" (list "minimal" "standard" "full") (eq $profile "workstation" | ternary "full" "standard") -}}
+{{/* Tier is independent of profile, so a constrained VPS can be a `server` on
+     `minimal` and a beefy one on `full`. */}}
+{{- $tier := promptChoiceOnce . "tier" "Tool tier" (list "minimal" "standard" "full") (eq $profile "workstation" | ternary "full" "standard") -}}
+{{- $tierRank := 0 -}}
+{{- if eq $tier "standard" }}{{ $tierRank = 1 }}{{ else if eq $tier "full" }}{{ $tierRank = 2 }}{{ end -}}
 
-{{- $multiplexer := promptChoiceOnce . "multiplexer" "Terminal multiplexer" (list "tmux" "zellij" "none") "tmux" -}}
+{{/* Decision #16: Bitwarden only, and `none` is a fully supported machine
+     state — secret-bearing files are excluded rather than failing to render. */}}
+{{- $secretsBackend := promptChoiceOnce . "secretsBackend" "Secrets backend" (list "none" "bitwarden") "none" -}}
 
-{{/* Secrets come from a password manager at apply time; nothing sensitive is
-     ever committed. See docs/SECRETS.md. */}}
-{{- $secretsBackend := promptChoiceOnce . "secretsBackend" "Secrets backend" (list "none" "1password" "bitwarden") "none" -}}
-
+{{/* Decision #19: SSH commit signing is available but off by default. */}}
 {{- $gpgSign    := promptBoolOnce   . "gpgSign"    "Enable SSH commit signing" false -}}
-{{- $signingKey := promptStringOnce . "signingKey" "SSH signing key (path or 'key::ssh-ed25519 ...'; blank to skip)" "" -}}
-{{- $workEmail  := promptStringOnce . "workEmail"  "Work email for repos under ~/work/ (blank to skip)" "" -}}
+{{- $signingKey := promptStringOnce . "signingKey" "SSH signing key path" "" -}}
 
-{{/* Nerd Font glyphs render client-side, so only a machine with a real terminal
-     emulator needs the font files. Detected, still overridable. */}}
-{{- $headless := promptBoolOnce . "headless" "Headless host? (skip Nerd Fonts)" (ne $profile "workstation") -}}
+{{/* ── Derived, once ─────────────────────────────────────────────────────── */}}
+{{- $isWorkstation := eq $profile "workstation" -}}
+{{- $isContainer   := eq $profile "container" -}}
 
 [data]
+    # ── Answers ─────────────────────────────────────────────────────────────
     name           = {{ $name           | quote }}
     email          = {{ $email          | quote }}
     editor         = {{ $editor         | quote }}
     profile        = {{ $profile        | quote }}
-    toolset        = {{ $toolset        | quote }}
-    multiplexer    = {{ $multiplexer    | quote }}
+    tier           = {{ $tier           | quote }}
+    tierRank       = {{ $tierRank }}
     secretsBackend = {{ $secretsBackend | quote }}
-    signingKey     = {{ $signingKey     | quote }}
-    workEmail      = {{ $workEmail      | quote }}
     gpgSign        = {{ $gpgSign }}
-    headless       = {{ $headless }}
+    signingKey     = {{ $signingKey     | quote }}
+
+    # ── Derived (report.md §3) — read these, never re-derive them ───────────
+    # Nerd Font glyphs render client-side; only a real terminal emulator needs
+    # the font files on disk.
+    fonts      = {{ $isWorkstation }}
+    # Ghostty/Alacritty are GUI apps: their config is meaningless elsewhere.
+    terminals  = {{ $isWorkstation }}
+    # Zellij auto-attach on login — never in a container, which is already a
+    # single-purpose session and would nest.
+    autoAttach = {{ not $isContainer }}
+    # The image sets the shell in a container; chsh there is a no-op at best.
+    chsh       = {{ not $isContainer }}
+    # A staleness hint on an ephemeral host is noise about a machine that will
+    # not exist tomorrow.
+    staleness  = {{ not $isContainer }}
+    # Servers and containers are memory-constrained relative to a workstation.
+    nodeHeapMB = {{ $isWorkstation | ternary 8192 2048 }}
 
 [diff]
-    # `chezmoi diff` uses its own colored differ, so it works before mise has
-    # installed delta. Pager stays off so diffs compose with other commands.
+    # chezmoi's built-in differ works before mise has installed delta, so a
+    # fresh machine can still `chezmoi diff`. Pager off so diffs compose.
     pager = ""
 
 [status]
     exclude = ["scripts"]
 
-{{- if eq $secretsBackend "1password" }}
+[git]
+    autoCommit = false
+    autoPush   = false
 
-[onepassword]
-    # `op` must be signed in (`eval $(op signin)`) before `chezmoi apply`.
-    command = "op"
-{{- else if eq $secretsBackend "bitwarden" }}
+{{- if eq $secretsBackend "bitwarden" }}
 
 [bitwarden]
-    # `bw unlock` and export BW_SESSION before `chezmoi apply`.
+    # `bw unlock` and `export BW_SESSION=...` must precede `chezmoi apply`.
+    # The session expires; docs/SECRETS.md covers the unhelpful error you get.
     command = "bw"
 {{- end }}

@@ -1,0 +1,158 @@
+# shellcheck shell=sh
+# ~/.config/shell/pickers.sh — fzf pickers (decision #40).
+#
+# Core (files, history, directories) and Infra (containers, pods, contexts, SSH
+# hosts). Every picker is guarded twice: on fzf, and on the tool it drives. On a
+# machine with neither, this file defines nothing and costs nothing.
+#
+# Ctrl-r / Ctrl-t / Alt-c come from fzf's own keybindings, loaded in
+# interactive.sh. These are the named pickers that go beyond them.
+
+command -v fzf >/dev/null 2>&1 || return 0
+
+# Preview commands degrade to POSIX tools when bat/eza are absent.
+if command -v bat >/dev/null 2>&1; then
+    _dotfiles_file_preview='bat --style=numbers --color=always --line-range=:200 {}'
+else
+    _dotfiles_file_preview='head -200 {}'
+fi
+if command -v eza >/dev/null 2>&1; then
+    _dotfiles_dir_preview='eza -la --icons=auto --group-directories-first --color=always {}'
+else
+    _dotfiles_dir_preview='ls -la {}'
+fi
+
+# @group pick — core fzf pickers
+
+# @help pick a file and open it in $EDITOR
+ff() {
+    _f=$(
+        if command -v fd >/dev/null 2>&1; then
+            fd --type f --hidden --exclude .git
+        else
+            find . -type f -not -path '*/.git/*'
+        fi | fzf --preview "$_dotfiles_file_preview" --preview-window=right:60%:wrap
+    ) || return 0
+    [ -n "$_f" ] && "$EDITOR" "$_f"
+    unset _f
+}
+
+# @help pick a directory and cd into it
+fcd() {
+    _d=$(
+        if command -v fd >/dev/null 2>&1; then
+            fd --type d --hidden --exclude .git
+        else
+            find . -type d -not -path '*/.git/*'
+        fi | fzf --preview "$_dotfiles_dir_preview" --preview-window=right:60%
+    ) || return 0
+    [ -n "$_d" ] && cd -- "$_d"
+    unset _d
+}
+
+# @help search shell history and put the chosen line on the command line
+fh() {
+    _c=$(fc -l 1 2>/dev/null | sed 's/^[[:space:]]*[0-9]*[[:space:]]*//' \
+        | awk '!seen[$0]++' | fzf --tac --no-sort) || return 0
+    [ -n "$_c" ] && printf '%s\n' "$_c"
+    unset _c
+}
+
+# @help grep the tree interactively, open the match in $EDITOR at its line
+# Named fgr, not fg: `fg` is the job-control builtin and shadowing it would
+# break the single most reflexive keystroke in an interactive shell.
+fgr() {
+    command -v rg >/dev/null 2>&1 || { echo 'fgr: needs ripgrep' >&2; return 1; }
+    _r=$(rg --line-number --no-heading --color=always --smart-case "${1:-}" 2>/dev/null \
+        | fzf --ansi --delimiter=: \
+            --preview 'bat --style=numbers --color=always --highlight-line {2} {1} 2>/dev/null || head -100 {1}' \
+            --preview-window='right:60%:+{2}-/2') || return 0
+    if [ -n "$_r" ]; then
+        _file=${_r%%:*}
+        _rest=${_r#*:}
+        _line=${_rest%%:*}
+        "$EDITOR" "+$_line" "$_file"
+        unset _file _rest _line
+    fi
+    unset _r
+}
+
+{{- if ge .tierRank 1 }}
+
+# @group pick-docker — container pickers
+
+# @help pick a running container and exec a shell in it
+fdex() {
+    command -v docker >/dev/null 2>&1 || { echo 'fdex: needs docker' >&2; return 1; }
+    _c=$(docker ps --format '{{`{{.Names}}`}}\t{{`{{.Image}}`}}\t{{`{{.Status}}`}}' \
+        | fzf --header='container to exec into' | cut -f1) || return 0
+    [ -n "$_c" ] && docker exec -it "$_c" sh -c 'command -v bash >/dev/null && exec bash || exec sh'
+    unset _c
+}
+
+# @help pick a container and follow its logs
+fdlog() {
+    command -v docker >/dev/null 2>&1 || { echo 'fdlog: needs docker' >&2; return 1; }
+    _c=$(docker ps --format '{{`{{.Names}}`}}\t{{`{{.Image}}`}}\t{{`{{.Status}}`}}' \
+        | fzf --header='container to tail' | cut -f1) || return 0
+    [ -n "$_c" ] && docker logs -f --tail=200 "$_c"
+    unset _c
+}
+{{- end }}
+
+{{- if ge .tierRank 2 }}
+
+# @group pick-k8s — Kubernetes pickers
+
+# @help pick a pod and follow its logs
+fkl() {
+    command -v kubectl >/dev/null 2>&1 || { echo 'fkl: needs kubectl' >&2; return 1; }
+    _p=$(kubectl get pods --no-headers -o custom-columns=':metadata.name,:status.phase,:spec.nodeName' 2>/dev/null \
+        | fzf --header='pod to tail' | awk '{ print $1 }') || return 0
+    [ -n "$_p" ] && kubectl logs -f --tail=200 "$_p"
+    unset _p
+}
+
+# @help pick a pod and exec a shell in it
+fkex() {
+    command -v kubectl >/dev/null 2>&1 || { echo 'fkex: needs kubectl' >&2; return 1; }
+    _p=$(kubectl get pods --no-headers -o custom-columns=':metadata.name,:status.phase' 2>/dev/null \
+        | fzf --header='pod to exec into' | awk '{ print $1 }') || return 0
+    [ -n "$_p" ] && kubectl exec -it "$_p" -- sh -c 'command -v bash >/dev/null && exec bash || exec sh'
+    unset _p
+}
+
+# @help pick a kube context and switch to it
+fkctx() {
+    command -v kubectl >/dev/null 2>&1 || { echo 'fkctx: needs kubectl' >&2; return 1; }
+    _c=$(kubectl config get-contexts -o name 2>/dev/null | fzf --header='context') || return 0
+    [ -n "$_c" ] && kubectl config use-context "$_c"
+    unset _c
+}
+
+# @help pick a namespace and make it current
+fkns() {
+    command -v kubectl >/dev/null 2>&1 || { echo 'fkns: needs kubectl' >&2; return 1; }
+    _n=$(kubectl get ns --no-headers -o custom-columns=':metadata.name' 2>/dev/null \
+        | fzf --header='namespace') || return 0
+    [ -n "$_n" ] && kubectl config set-context --current --namespace "$_n"
+    unset _n
+}
+{{- end }}
+
+# @group pick-ssh — hosts from your ssh config
+
+# @help pick a host from ~/.ssh/config (including config.d) and connect
+fssh() {
+    _hosts=$(
+        # Decision #30: the real hosts live in the unmanaged config.d drop-in,
+        # so both files are read and neither is required to exist.
+        cat "$HOME/.ssh/config" "$HOME"/.ssh/config.d/* 2>/dev/null \
+            | awk '/^[Hh]ost / { for (i = 2; i <= NF; i++) if ($i !~ /[*?]/) print $i }' \
+            | sort -u
+    )
+    [ -n "$_hosts" ] || { echo 'fssh: no hosts in ~/.ssh/config or ~/.ssh/config.d/' >&2; unset _hosts; return 1; }
+    _h=$(printf '%s\n' "$_hosts" | fzf --header='ssh host') || { unset _hosts; return 0; }
+    [ -n "$_h" ] && ssh "$_h"
+    unset _hosts _h
+}

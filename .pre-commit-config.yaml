@@ -1,0 +1,100 @@
+# Decision #19: gitleaks plus the linters this repository already uses.
+#
+# Every hook is `language: system` on purpose (decision #45). The alternative —
+# `language: python` or `language: golang` — makes pre-commit install its OWN
+# copy of shellcheck, shfmt and ruff, at its own versions, in its own
+# virtualenv. You would then have two shellchecks that disagree about your code,
+# which is exactly the defect this repository was rebuilt to remove.
+#
+# These resolve through mise, so the editor, the shell, this hook and CI are
+# running the same binary.
+#
+#   pre-commit install --install-hooks --hook-type commit-msg
+
+repos:
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks (staged secrets)
+        entry: gitleaks protect --staged --redact --verbose
+        language: system
+        pass_filenames: false
+
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck --severity=warning --shell=sh --exclude=SC1090,SC1091
+        language: system
+        files: '\.sh$'
+        exclude: '^portable\.sh$'   # generated; checked as a whole by `make lint`
+
+      - id: shfmt
+        name: shfmt
+        entry: shfmt -i 4 -ci -sr -d
+        language: system
+        files: '\.sh$'
+        exclude: '^portable\.sh$'
+
+      - id: stylua
+        name: stylua
+        entry: stylua --check
+        language: system
+        files: '\.lua$'
+
+      - id: taplo
+        name: taplo (TOML)
+        entry: taplo check
+        language: system
+        files: '\.toml$'
+        exclude: '\.tmpl$'          # a template is not valid TOML until rendered
+
+      # The repository's own invariants. These are the checks that make the
+      # single-source-of-truth claims true rather than aspirational, so they run
+      # before a commit rather than only in CI.
+      - id: render
+        name: every template renders on every profile
+        entry: sh test/render.sh
+        language: system
+        pass_filenames: false
+        files: '^home/'
+
+      - id: lint-help
+        name: every alias and function is documented
+        entry: sh test/lint-help.sh
+        language: system
+        pass_filenames: false
+        files: '^home/dot_config/shell/'
+
+      - id: theme-check
+        name: theme.toml reaches exactly its declared consumers
+        entry: sh test/theme-check.sh
+        language: system
+        pass_filenames: false
+        files: '^(home/|test/theme-consumers\.txt)'
+
+      - id: portable-fresh
+        name: portable.sh is current
+        entry: sh -c 'sh scripts/gen-portable.sh >/dev/null && git diff --exit-code -- portable.sh'
+        language: system
+        pass_filenames: false
+        files: '^home/dot_config/shell/'
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-added-large-files
+        args: [--maxkb=512]
+
+  # Decision #22: Conventional Commits, enforced by hook. No changelog, no
+  # release automation — just a readable history.
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.0.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert]

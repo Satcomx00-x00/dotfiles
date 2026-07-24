@@ -1,0 +1,39 @@
+# Global conventions
+
+Applied to every project on this machine (decision #28). Project-level
+`CLAUDE.md` files override anything here.
+
+Managed by chezmoi — edit the source, not this file:
+`chezmoi edit ~/.claude/CLAUDE.md`
+
+## Environment
+
+This machine is configured from a chezmoi dotfiles repository. Assume:
+
+- **Shell**: zsh, emacs keybindings, POSIX-shared config in `~/.config/shell/`.
+  Anything sourced by both bash and zsh must be POSIX — no arrays, no `[[`.
+- **Tools**: installed by `mise`, from `.chezmoidata/tools.toml`. To add a tool,
+  add it there rather than installing it ad hoc; six other things read that file.
+- **Editor**: Neovim, lazy.nvim, `<Space>` leader with mnemonic namespaces
+  (f files, g git, c code, s search, b buffers, x diagnostics, u toggles, d debug).
+- **Multiplexer**: Zellij, default modal keybindings.
+- **Linters and formatters**: `shellcheck`, `shfmt`, `ruff`, `stylua`,
+  `hadolint`. These are the SAME binaries the editor, pre-commit hooks and CI
+  use — never install a second copy in a virtualenv or via mason.
+
+## Working style
+
+- Match the surrounding code: its comment density, naming and idiom.
+- Prefer editing an existing file over creating a new one.
+- Shell scripts: POSIX `sh` unless there is a reason not to; `set -eu`;
+  quote every expansion; `shfmt -i 4 -ci -sr`.
+- Explain *why* in comments, not *what*. The code already says what.
+- When something is verified, say so plainly; when it is not, say that instead.
+
+## Never
+
+- Commit secrets. `gitleaks` runs as a pre-commit hook and in CI, but it is the
+  last line, not the first.
+- Add a hostname, internal domain or IP to a tracked file. Those live in
+  `~/.ssh/config.d/` and `~/.config/shell/local.sh`, neither of which is managed.
+- Introduce a second source of truth for something the data files already own.

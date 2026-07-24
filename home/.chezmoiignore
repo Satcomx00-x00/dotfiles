@@ -1,16 +1,22 @@
 {{/*
   Evaluated as a template on every apply: decides, per machine, what NOT to
   materialise. Anything listed here is left untouched in the target directory.
+
+  Every entry below tests a DERIVED flag from .chezmoi.toml.tmpl rather than
+  re-deriving from .profile — see the note there. The exception is tierRank,
+  which is itself a derived integer and is compared numerically so tiers stay
+  cumulative (minimal ⊂ standard ⊂ full) without a chain of `or (eq ...)`.
 */}}
 
 # ─── Fonts: only where a terminal emulator actually renders glyphs ───────────
-{{- if .headless }}
+{{- if not .fonts }}
 .local/share/fonts
 {{- end }}
 
-# ─── Work git identity: only when a work email was configured ────────────────
-{{- if not .workEmail }}
-.config/git/config-work
+# ─── Terminal emulators: GUI applications, config is inert without them ──────
+{{- if not .terminals }}
+.config/ghostty
+.config/alacritty
 {{- end }}
 
 # ─── SSH commit signing allow-list: only when signing is on ──────────────────
@@ -18,22 +24,27 @@
 .config/git/allowed_signers
 {{- end }}
 
-# ─── Multiplexer: ship only the one this machine uses ────────────────────────
-{{- if ne .multiplexer "tmux" }}
-.config/tmux
-{{- end }}
-{{- if ne .multiplexer "zellij" }}
-.config/zellij
-{{- end }}
-
-# ─── Secrets drop-in: only when a password-manager backend is configured ─────
-# Without this guard the template would call `op`/`bw` on a machine that has
-# neither, and the whole apply would fail.
+# ─── Secrets drop-in: only with a configured backend ─────────────────────────
+# Without this guard the template would call `bw` on a machine that has neither
+# the CLI nor a vault, and the entire apply would fail — not just this file.
 {{- if eq .secretsBackend "none" }}
 .config/shell/secrets.sh
 {{- end }}
 
-# ─── Neovim: a `minimal` box gets the vi-compatible fallback only ────────────
-{{- if eq .toolset "minimal" }}
+# ─── minimal tier: the vi-compatible fallback only, no editor, no multiplexer ─
+{{- if lt .tierRank 1 }}
 .config/nvim
+.config/zellij
 {{- end }}
+
+# ─── full tier only ──────────────────────────────────────────────────────────
+{{- if lt .tierRank 2 }}
+.config/k9s
+{{- end }}
+
+# ─── Never managed, ever ─────────────────────────────────────────────────────
+# Listed for the reader's benefit and as a guard against a future commit
+# accidentally adding them to the source tree. Decision #30: these are the
+# files that would turn a public repo into a map of your estate.
+.config/shell/local.sh
+.ssh/config.d

@@ -1,0 +1,126 @@
+#!/bin/sh
+# Phase 9 — generate the help index that `dotfiles help` displays.
+#
+# Decision #37: discoverability comes from one generated command instead of
+# which-key, tldr and navi. That is only honest if the index is built from the
+# configuration that is actually installed, which is what this does — it parses
+# the applied files in ~/.config/shell, not the templates.
+#
+# The output is a static TSV. `dotfiles help` does nothing but filter it through
+# fzf, so the cost at call time is a file read, and the cost at shell startup is
+# zero.
+#
+# aliases:   {{ include "dot_config/shell/aliases.sh.tmpl" | sha256sum }}
+# functions: {{ include "dot_config/shell/functions.sh.tmpl" | sha256sum }}
+# pickers:   {{ include "dot_config/shell/pickers.sh.tmpl" | sha256sum }}
+# keys:      {{ include ".chezmoidata/keys.toml" | sha256sum }}
+#
+# OPTIONAL phase: no help index is a smaller problem than a failed apply.
+
+set -eu
+
+log() { printf '  help: %s\n' "$*"; }
+
+SHELL_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/shell"
+OUT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles"
+OUT="$OUT_DIR/help.tsv"
+
+mkdir -p "$OUT_DIR"
+
+# ─── Aliases, functions and pickers ──────────────────────────────────────────
+# Convention (IMPLEMENTATION.md §4.3):
+#
+#     # @group git — version control      section header, inherited below it
+#     # @help short status                optional, overrides the default text
+#     alias gs='git status -sb'
+#
+# When no @help is given the definition itself becomes the description, which
+# is why `alias gs='git status -sb'` needs no annotation to be useful.
+parse_shell_file() {
+    [ -r "$1" ] || return 0
+    awk '
+        function flush_desc() { desc = "" }
+
+        /^[[:space:]]*#[[:space:]]*@group[[:space:]]/ {
+            line = $0
+            sub(/^[[:space:]]*#[[:space:]]*@group[[:space:]]+/, "", line)
+            # "git — version control" -> group "git", blurb the rest
+            group = line
+            sub(/[[:space:]]*[—-].*$/, "", group)
+            gsub(/[[:space:]]+$/, "", group)
+            next
+        }
+
+        /^[[:space:]]*#[[:space:]]*@help[[:space:]]/ {
+            desc = $0
+            sub(/^[[:space:]]*#[[:space:]]*@help[[:space:]]+/, "", desc)
+            next
+        }
+
+        /^[[:space:]]*alias[[:space:]]+[A-Za-z0-9_.:-]+=/ {
+            line = $0
+            sub(/^[[:space:]]*alias[[:space:]]+/, "", line)
+            split(line, kv, "=")
+            name = kv[1]
+            body = substr(line, length(name) + 2)
+            gsub(/^['"'"'"]|['"'"'"]$/, "", body)
+            if (name == "--" || substr(name, 1, 1) == "_") { flush_desc(); next }
+            printf "%s\talias\t%s\t%s\t%s\n", group, name, (desc != "" ? desc : body), body
+            flush_desc()
+            next
+        }
+
+        /^[[:space:]]*[A-Za-z0-9_.:-]+[[:space:]]*\(\)[[:space:]]*\{/ {
+            name = $0
+            sub(/^[[:space:]]*/, "", name)
+            sub(/[[:space:]]*\(\).*$/, "", name)
+            if (substr(name, 1, 1) == "_") { flush_desc(); next }
+            printf "%s\tfunction\t%s\t%s\t%s\n", group, name, (desc != "" ? desc : name " ..."), name
+            flush_desc()
+            next
+        }
+
+        # Any other real content ends an @help block that never found a target.
+        /[^[:space:]]/ && !/^[[:space:]]*#/ { flush_desc() }
+    ' "$1"
+}
+
+TMP="$OUT.tmp.$$"
+: > "$TMP"
+
+for f in aliases functions pickers; do
+    parse_shell_file "$SHELL_DIR/$f.sh" >> "$TMP"
+done
+
+# ─── Data-file entries: keybindings and tools ────────────────────────────────
+# A QUOTED heredoc delimiter, not a series of printf calls with double-quoted
+# arguments. The descriptions in the data files are prose written for humans and
+# contain backticks, dollars and quotes; inside a double-quoted shell word those
+# are command substitution and variable expansion. `<<'HELPDATA'` makes the
+# whole block literal, and it is one process instead of ninety.
+cat >> "$TMP" << 'HELPDATA'
+{{ range .keys.zellij -}}
+zellij{{ "\t" }}key{{ "\t" }}{{ .key }}{{ "\t" }}{{ .role }}{{ "\t" }}{{ dig "plugin" "stock" . }}
+{{ end -}}
+{{ range .keys.shell -}}
+shell-keys{{ "\t" }}key{{ "\t" }}{{ .key }}{{ "\t" }}{{ .role }}{{ "\t" }}
+{{ end -}}
+{{ range .tools.list -}}
+{{ if le .rank $.tierRank -}}
+tool:{{ .group }}{{ "\t" }}tool{{ "\t" }}{{ .name }}{{ "\t" }}{{ .role }}{{ "\t" }}{{ .backend }}
+{{ end -}}
+{{ end -}}
+HELPDATA
+
+# ─── Neovim keymaps — asked of the editor, never parsed ──────────────────────
+# 35-nvim-sync writes this fragment by dumping vim.api.nvim_get_keymap from a
+# real headless Neovim. Parsing Lua to guess at keymaps would drift; asking the
+# editor what it actually bound cannot.
+if [ -r "$OUT_DIR/help-nvim.tsv" ]; then
+    cat "$OUT_DIR/help-nvim.tsv" >> "$TMP"
+fi
+
+sort -u -o "$TMP" "$TMP"
+mv -f "$TMP" "$OUT"
+
+log "$(wc -l < "$OUT" | tr -d ' ') entries indexed"

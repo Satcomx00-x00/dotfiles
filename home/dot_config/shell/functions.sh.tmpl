@@ -1,0 +1,214 @@
+# shellcheck shell=sh
+# ~/.config/shell/functions.sh — shell functions shared by bash and zsh.
+#
+# POSIX only, and silent at load time. Anything that needs a shell hook
+# (chpwd, command-not-found, precmd) lives in interactive.sh instead, because
+# hooks are the one thing bash and zsh genuinely disagree about.
+
+# @group files — archives, backups, navigation
+
+# @help extract any archive by extension — one command for eight formats
+extract() {
+    if [ $# -eq 0 ]; then
+        echo 'usage: extract <archive>...' >&2
+        return 2
+    fi
+    for _archive in "$@"; do
+        if [ ! -f "$_archive" ]; then
+            echo "extract: not a file: $_archive" >&2
+            continue
+        fi
+        case "$_archive" in
+            *.tar.bz2 | *.tbz2) tar xjf "$_archive" ;;
+            *.tar.gz | *.tgz) tar xzf "$_archive" ;;
+            *.tar.xz | *.txz) tar xJf "$_archive" ;;
+            *.tar.zst) tar --zstd -xf "$_archive" ;;
+            *.tar) tar xf "$_archive" ;;
+            *.bz2) bunzip2 "$_archive" ;;
+            *.gz) gunzip "$_archive" ;;
+            *.xz) unxz "$_archive" ;;
+            *.zip) unzip -q "$_archive" ;;
+            *.7z) 7z x "$_archive" ;;
+            *.rar) unrar x "$_archive" ;;
+            *.Z) uncompress "$_archive" ;;
+            *)
+                echo "extract: unknown format: $_archive" >&2
+                return 1
+                ;;
+        esac
+    done
+    unset _archive
+}
+
+# @help create a directory and cd into it
+mkcd() {
+    [ $# -eq 1 ] || { echo 'usage: mkcd <dir>' >&2; return 2; }
+    mkdir -p -- "$1" && cd -- "$1" || return 1
+}
+
+# @help climb N directory levels — `up 3` is ../../..
+up() {
+    _n=${1:-1}
+    case "$_n" in
+        '' | *[!0-9]*)
+            echo 'usage: up [levels]' >&2
+            unset _n
+            return 2
+            ;;
+    esac
+    _path=''
+    while [ "$_n" -gt 0 ]; do
+        _path="../$_path"
+        _n=$((_n - 1))
+    done
+    unset _n
+    # shellcheck disable=SC2164  # the cd failure is reported by cd itself
+    cd "${_path:-.}" || return 1
+    unset _path
+}
+
+# @help timestamped copy of a file, in place — `bak nginx.conf`
+bak() {
+    [ $# -ge 1 ] || { echo 'usage: bak <file>...' >&2; return 2; }
+    for _f in "$@"; do
+        cp -a -- "$_f" "$_f.$(date +%Y%m%d-%H%M%S).bak" || return 1
+    done
+    unset _f
+}
+
+# @group marks — named directory bookmarks
+# Stored as a plain tab-separated file you can edit by hand. Completion for
+# `jump` and `unmark` is registered per-shell in ~/.zshrc and ~/.bashrc.
+
+_dotfiles_marks_file() {
+    printf '%s\n' "${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/bookmarks"
+}
+
+# @help bookmark the current directory under a name
+mark() {
+    [ $# -eq 1 ] || { echo 'usage: mark <name>' >&2; return 2; }
+    _file=$(_dotfiles_marks_file)
+    mkdir -p -- "$(dirname -- "$_file")"
+    [ -f "$_file" ] || : >"$_file"
+    # Replace any existing entry with the same name.
+    _tmp="$_file.tmp.$$"
+    grep -v "^$1	" "$_file" >"$_tmp" 2>/dev/null || :
+    printf '%s\t%s\n' "$1" "$PWD" >>"$_tmp"
+    sort -o "$_file" "$_tmp" && rm -f "$_tmp"
+    unset _file _tmp
+}
+
+# @help cd to a bookmark
+jump() {
+    [ $# -eq 1 ] || { echo 'usage: jump <name>' >&2; return 2; }
+    _file=$(_dotfiles_marks_file)
+    _dir=$(awk -F'\t' -v n="$1" '$1 == n { print $2; exit }' "$_file" 2>/dev/null)
+    if [ -z "$_dir" ]; then
+        echo "jump: no such mark: $1" >&2
+        unset _file _dir
+        return 1
+    fi
+    cd -- "$_dir" || { unset _file _dir; return 1; }
+    unset _file _dir
+}
+
+# @help list bookmarks
+marks() {
+    _file=$(_dotfiles_marks_file)
+    [ -s "$_file" ] || { echo 'no marks yet — use `mark <name>`'; unset _file; return 0; }
+    while IFS='	' read -r _name _dir; do
+        printf '%-16s %s\n' "$_name" "$_dir"
+    done <"$_file"
+    unset _file _name _dir
+}
+
+# @help remove a bookmark
+unmark() {
+    [ $# -eq 1 ] || { echo 'usage: unmark <name>' >&2; return 2; }
+    _file=$(_dotfiles_marks_file)
+    [ -f "$_file" ] || { unset _file; return 0; }
+    _tmp="$_file.tmp.$$"
+    grep -v "^$1	" "$_file" >"$_tmp" 2>/dev/null || :
+    mv -- "$_tmp" "$_file"
+    unset _file _tmp
+}
+
+# Emits mark names, one per line. Used by the per-shell completion wiring.
+_dotfiles_mark_names() {
+    cut -f1 "$(_dotfiles_marks_file)" 2>/dev/null || :
+}
+
+# @group root — sudo that keeps your environment (decision #27)
+# Nothing is installed into /root: it is left exactly as the distro shipped it.
+# Instead, the environment travels with you through sudo, so `sudo nvim` uses
+# your editor and your config, and `sudo kubectl` uses the mise-managed binary
+# rather than failing with "command not found" because root has a bare PATH.
+
+# @help sudo, preserving PATH, EDITOR and the tools you actually use
+sudo() {
+    # Options-only invocations (`sudo -i`, `sudo -l`, `sudo -v`) must reach the
+    # real sudo untouched — wrapping them in `env` would change what they mean.
+    case "${1:-}" in
+        '' | -*)
+            command sudo "$@"
+            return $?
+            ;;
+    esac
+
+    # --preserve-env carries the variables through sudoers' env_reset; the
+    # explicit `env PATH=` is needed as well, because secure_path in
+    # /etc/sudoers overrides even a preserved PATH on most distributions.
+    command sudo \
+        --preserve-env=PATH,EDITOR,VISUAL,PAGER,LANG,LC_ALL,TERM,COLORTERM \
+        --preserve-env=XDG_CONFIG_HOME,XDG_DATA_HOME,XDG_STATE_HOME,XDG_CACHE_HOME \
+        --preserve-env=KUBECONFIG,AWS_PROFILE,AWS_REGION,STARSHIP_CONFIG \
+        env "PATH=$PATH" "$@"
+}
+
+# @group net — ports and connectivity
+
+# @help which process is listening on a port — `port 8080`
+port() {
+    [ $# -eq 1 ] || { echo 'usage: port <number>' >&2; return 2; }
+    if command -v ss >/dev/null 2>&1; then
+        ss -tulpn 2>/dev/null | grep -E "[:.]$1[[:space:]]" || echo "nothing listening on $1"
+    elif command -v lsof >/dev/null 2>&1; then
+        lsof -nP -iTCP:"$1" -sTCP:LISTEN || echo "nothing listening on $1"
+    else
+        netstat -tulpn 2>/dev/null | grep -E "[:.]$1[[:space:]]" || echo "nothing listening on $1"
+    fi
+}
+
+# @group info — this machine
+
+# @help host, OS, kernel, uptime, CPU, memory and disk at a glance
+# Decision #25: login prints NOTHING. This is that information, on demand.
+sysinfo() {
+    printf '%-10s %s\n' 'host' "$(hostname 2>/dev/null || uname -n)"
+    if [ -r /etc/os-release ]; then
+        # shellcheck disable=SC1091
+        printf '%-10s %s\n' 'os' "$(. /etc/os-release && printf '%s' "${PRETTY_NAME:-$NAME}")"
+    fi
+    printf '%-10s %s\n' 'kernel' "$(uname -sr)"
+    printf '%-10s %s\n' 'arch' "$(uname -m)"
+    printf '%-10s %s\n' 'shell' "${SHELL##*/} ${ZSH_VERSION:-${BASH_VERSION:-}}"
+    printf '%-10s %s\n' 'profile' "${DOTFILES_PROFILE:-unknown}/${DOTFILES_TIER:-unknown}"
+    [ -r /proc/uptime ] && printf '%-10s %s\n' 'uptime' \
+        "$(awk '{d=int($1/86400); h=int($1%86400/3600); m=int($1%3600/60);
+                 if (d) printf "%dd %dh %dm", d, h, m; else if (h) printf "%dh %dm", h, m;
+                 else printf "%dm", m}' /proc/uptime)"
+    [ -r /proc/cpuinfo ] && printf '%-10s %s x %s\n' 'cpu' \
+        "$(grep -c ^processor /proc/cpuinfo)" \
+        "$(awk -F': ' '/model name/ { print $2; exit }' /proc/cpuinfo)"
+    if [ -r /proc/meminfo ]; then
+        printf '%-10s %s\n' 'memory' "$(awk '
+            /^MemTotal:/     { t = $2 }
+            /^MemAvailable:/ { a = $2 }
+            END { printf "%.1f GiB used of %.1f GiB", (t - a) / 1048576, t / 1048576 }
+        ' /proc/meminfo)"
+    fi
+    printf '%-10s %s\n' 'disk' "$(df -h / 2>/dev/null | awk 'NR == 2 { print $3 " used of " $2 " (" $5 ")" }')"
+    [ -n "${DOTFILES_SSH:-}" ] && printf '%-10s %s\n' 'ssh' "${SSH_CONNECTION%% *}"
+    [ -n "${DOTFILES_WSL:-}" ] && printf '%-10s %s\n' 'wsl' "${WSL_DISTRO_NAME:-yes}"
+    return 0
+}

@@ -1,0 +1,50 @@
+{{- /*
+  ~/.config/mise/config.toml — generated ENTIRELY from .chezmoidata/tools.toml.
+
+  There is not one hand-written tool entry in this file, and there must never
+  be. Adding a tool is one entry in the data file; it then reaches this config,
+  the install script's re-run hash, `dotfiles doctor`, `dotfiles help`, the
+  README table and the post-apply assertions at once.
+
+  Backend order is decision #47: aqua first, because its registry carries
+  cosign/SLSA/minisign/GitHub-attestation verification, so every tool resolving
+  through it is cryptographically verified at install time for free.
+*/ -}}
+{{- $wsl := or (env "WSL_DISTRO_NAME") (stat "/run/WSL") (stat "/proc/sys/fs/binfmt_misc/WSLInterop") -}}
+# Generated from .chezmoidata/tools.toml — do not edit.
+# Tier: {{ .tier }} (rank {{ .tierRank }})
+
+[tools]
+{{- range .tools.list }}
+{{- /* hasKey, not `.when` or `default "" .when`: chezmoi runs templates with
+       missingkey=error, so touching an absent optional field is a hard failure
+       rather than an empty value. Every optional field is read this way. */}}
+{{- $skip := and (hasKey . "when") (and (eq (dig "when" "" .) "wsl") (not $wsl)) }}
+{{- if and (le .rank $.tierRank) (not $skip) }}
+{{- $pin := dig "pin" "" . }}
+{{- /* core: tools are mise's own built-in plugins and take a bare name. */}}
+{{- if hasPrefix "core:" .backend }}
+{{ .name }} = "{{ .version }}"{{ if $pin }}  # PIN: {{ $pin }}{{ end }}
+{{- else }}
+"{{ .backend }}" = "{{ .version }}"{{ if $pin }}  # PIN: {{ $pin }}{{ end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+[settings]
+# Install several tools at once; the bootstrap is dominated by download time.
+jobs = 4
+# Do not print a progress bar into a non-tty (CI logs, `chezmoi apply` output).
+quiet = false
+# Read .tool-versions, .nvmrc, .python-version and friends, so a project that
+# predates mise still pins correctly.
+idiomatic_version_file = true
+# Offer to install a tool the moment a directory asks for one.
+not_found_auto_install = true
+# Trust this generated config without an interactive prompt: chezmoi wrote it.
+paranoid = false
+
+[settings.status]
+# The "missing tools" banner on every cd is noise on a machine that is
+# deliberately on a lower tier.
+missing_tools = "if_other_versions_installed"

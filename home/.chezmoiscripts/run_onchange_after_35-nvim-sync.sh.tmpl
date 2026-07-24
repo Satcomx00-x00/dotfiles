@@ -1,0 +1,134 @@
+{{- if ge .tierRank 1 -}}
+#!/bin/sh
+# Phase 7 — sync Neovim plugins headlessly, and ask it for its own keymap.
+#
+# Two jobs, both of which have to happen here rather than on first launch:
+#
+# 1. Plugin and LSP sync. A config that has only ever been loaded interactively
+#    usually fails headless, and headless is exactly how every container image
+#    and CI run loads it. Doing it at apply time also means the first real
+#    launch is instant instead of a two-minute install.
+#
+# 2. The keymap dump for `dotfiles help`. Parsing Lua to guess at keymaps would
+#    drift the moment a plugin sets one; asking a running Neovim what it
+#    actually bound cannot. The keymap helper requires a description, so the
+#    dump is complete by construction.
+#
+# `include` cannot hash a directory, so the whole config tree is hashed at apply
+# time instead — the script re-runs when any Lua file changes, and renders fine
+# before the config exists at all.
+# nvim config: {{ output "sh" "-c" (printf "find '%s/dot_config/nvim' -type f 2>/dev/null | sort | xargs cat 2>/dev/null | sha256sum || true" .chezmoi.sourceDir) | trim }}
+#
+# OPTIONAL phase: warns and continues. Neovim syncing plugins is not a
+# precondition for having a working machine.
+
+set -eu
+
+log() { printf '  nvim: %s\n' "$*"; }
+
+export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:$PATH"
+
+command -v nvim > /dev/null 2>&1 || {
+    log 'not installed yet — skipping (it will sync on first launch)'
+    exit 0
+}
+[ -d "${XDG_CONFIG_HOME:-$HOME/.config}/nvim" ] || {
+    log 'no config — skipping'
+    exit 0
+}
+
+# ─── 1. Plugin sync ──────────────────────────────────────────────────────────
+# `Lazy! sync` is the blocking form; without the bang it returns before the
+# install finishes and the exit status means nothing.
+log 'syncing plugins (first run downloads ~30 repositories)'
+_out=$(mktemp 2> /dev/null || echo /tmp/nvim-sync.$$)
+_rc=0
+nvim --headless "+Lazy! sync" +qa > "$_out" 2>&1 || _rc=$?
+
+# Neovim's exit status is NOT sufficient. A config that throws during startup
+# still exits 0 here, so a broken `fillchars` — which stops the editor loading
+# entirely — was reported as a successful sync. The output has to be inspected.
+#
+# Matched narrowly and after stripping ANSI: lazy.nvim's progress output is
+# colourful and mentions plenty of words that a loose pattern treats as errors,
+# which turns this check into noise everyone learns to ignore.
+sed 's/\033\[[0-9;]*m//g' "$_out" > "$_out.clean" 2> /dev/null || cp "$_out" "$_out.clean"
+if [ "$_rc" -ne 0 ] || grep -qE 'Error detected|stack traceback|E5(1[0-9]{2}|13):' "$_out.clean"; then
+    log 'WARN plugin sync reported errors:'
+    grep -E 'Error detected|stack traceback|E5[0-9]{3}:' "$_out.clean" | head -10 | sed 's/^/    /' >&2
+else
+    log 'plugins synced'
+fi
+rm -f "$_out" "$_out.clean"
+
+# ─── 2. Keymap dump for `dotfiles help` ──────────────────────────────────────
+OUT_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles"
+mkdir -p "$OUT_DIR"
+
+# Exported BEFORE nvim runs — the Lua below reads it from the environment.
+DOTFILES_HELP_NVIM="$OUT_DIR/help-nvim.tsv"
+export DOTFILES_HELP_NVIM
+
+# Emits: group <TAB> kind <TAB> lhs <TAB> desc <TAB> mode
+# Leader-prefixed maps carrying a description: the ones a human looks up. The
+# namespace letter after the leader IS the group (decision #43), so help groups
+# itself the same way the keymap does.
+# ── Known limitation, measured rather than assumed ───────────────────────────
+# nvim_get_keymap returns GLOBAL maps only. Buffer-local ones — gitsigns'
+# <leader>g hunk bindings, and every LSP binding (gd, gr, <leader>c*) — are
+# registered by an on_attach callback that does not fire in a headless Neovim,
+# even with a real file open in a real git repository. That was tried; gitsigns
+# attaches (b:gitsigns_head is set) but on_attach never runs, so there is
+# nothing to read.
+#
+# Those bindings therefore do not appear in `dotfiles help`. They follow the
+# same mnemonic namespaces (decision #43), which is what makes them guessable,
+# and docs/CUSTOMIZING.md says so plainly instead of this script pretending
+# otherwise with machinery that returns an empty list.
+
+# One row per binding, with the modes it applies in collected into a single
+# field. Keying on mode instead would list <leader>D three times — identical
+# except for a column nobody is searching on.
+nvim --headless -c 'lua
+  local rows, order = {}, {}
+  local function collect(list, mode)
+    for _, m in ipairs(list) do
+      local lhs = m.lhs or ""
+      local is_leader = lhs:sub(1, 1) == " " or lhs:sub(1, 7) == "<Space>"
+      if is_leader and m.desc and m.desc ~= "" then
+        lhs = lhs:gsub("^<Space>", "<leader>"):gsub("^ ", "<leader>")
+        local key = lhs .. "\1" .. m.desc
+        if rows[key] then
+          if not rows[key].modes:find(mode, 1, true) then
+            rows[key].modes = rows[key].modes .. mode
+          end
+        else
+          rows[key] = { lhs = lhs, desc = m.desc, modes = mode }
+          order[#order + 1] = key
+        end
+      end
+    end
+  end
+
+  for _, mode in ipairs({ "n", "v", "x" }) do
+    collect(vim.api.nvim_get_keymap(mode), mode)
+  end
+
+  local out = {}
+  for _, key in ipairs(order) do
+    local r = rows[key]
+    -- The namespace letter after the leader IS the group (decision #43).
+    local ns = r.lhs:match("^<leader>(%a)") or "misc"
+    out[#out + 1] = table.concat({ "nvim:" .. ns, "keymap", r.lhs, r.desc, r.modes }, "\t")
+  end
+  table.sort(out)
+  local f = io.open(vim.env.DOTFILES_HELP_NVIM, "w")
+  if f then f:write(table.concat(out, "\n")); f:write("\n"); f:close() end
+' +qa > /dev/null 2>&1 || log 'WARN keymap export failed'
+
+if [ -s "$DOTFILES_HELP_NVIM" ]; then
+    log "$(wc -l < "$DOTFILES_HELP_NVIM" | tr -d ' ') keymaps exported to help"
+else
+    log 'WARN keymap export produced nothing'
+fi
+{{- end -}}

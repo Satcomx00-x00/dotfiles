@@ -1,0 +1,17 @@
+# ~/.config/bat/config — generated from .chezmoidata/theme.toml.
+#
+# bat is the syntax highlighter for `cat`, for man pages, for fzf previews and
+# for git diffs through delta. Setting the theme once here is what makes all
+# four agree.
+
+--theme="{{ .theme.bat }}"
+--style="numbers,changes,header"
+--italic-text=always
+--paging=auto
+
+# Map extensions the syntax detector does not know about.
+--map-syntax=".chezmoiignore:Bourne Again Shell (bash)"
+--map-syntax="*.tmpl:Bourne Again Shell (bash)"
+--map-syntax="*.kdl:JavaScript"
+--map-syntax=".env*:Bourne Again Shell (bash)"
+--map-syntax="Containerfile:Dockerfile"

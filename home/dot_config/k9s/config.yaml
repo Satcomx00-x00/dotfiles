@@ -1,0 +1,23 @@
+# ~/.config/k9s/config.yaml — `full` tier only.
+k9s:
+  liveViewAutoRefresh: false
+  refreshRate: 2
+  maxConnRetry: 5
+  readOnly: false
+  noExitOnCtrlC: false
+  ui:
+    skin: tokyonight
+    enableMouse: false
+    headless: false
+    logoless: true
+    crumbsless: false
+    reactive: true
+    noIcons: false
+  skipLatestRevCheck: true
+  disablePodCounting: false
+  logger:
+    tail: 200
+    buffer: 5000
+    sinceSeconds: -1
+    textWrap: false
+    showTime: false

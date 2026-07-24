@@ -1,0 +1,22 @@
+# Test fixture: a headless Linux server on the standard tier.
+# See test/fixtures/workstation-full.toml for what a fixture is.
+
+[data]
+    name           = "CI Tester"
+    email          = "ci@example.com"
+    editor         = "nvim"
+
+    profile        = "server"
+    tier           = "standard"
+    tierRank       = 1
+
+    secretsBackend = "none"
+    gpgSign        = false
+    signingKey     = ""
+
+    fonts          = false
+    terminals      = false
+    autoAttach     = true
+    chsh           = true
+    staleness      = true
+    nodeHeapMB     = 2048

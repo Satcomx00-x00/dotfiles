@@ -1,0 +1,117 @@
+{{- $p := .theme.palette -}}
+{{- $a := .theme.ansi -}}
+{{- $home := .chezmoi.homeDir -}}
+// ~/.config/zellij/config.kdl — generated from .chezmoidata/*.toml.
+//
+// Decision #42: the DEFAULT modal keybinding scheme, unmodified. Every Zellij
+// doc, issue and Stack Overflow answer then applies directly to this setup, and
+// the zjstatus bar shows the active mode at all times. Only three things are
+// added, all of them absent upstream:
+//
+//   Ctrl-h/j/k/l   unified pane/split navigation across the Neovim boundary
+//   Ctrl-o w       the `room` session and project switcher
+//   autolock       locks Zellij while Neovim has focus, so vim keys are never
+//                  stolen mid-edit
+//
+// Plugin paths are absolute because Zellij's `file:` scheme does not expand ~.
+
+theme "tokyonight"
+
+themes {
+    tokyonight {
+        fg "{{ $p.fg }}"
+        bg "{{ $p.bg_highlight }}"
+        black "{{ $a.black }}"
+        red "{{ $a.red }}"
+        green "{{ $a.green }}"
+        yellow "{{ $a.yellow }}"
+        blue "{{ $a.blue }}"
+        magenta "{{ $a.magenta }}"
+        cyan "{{ $a.cyan }}"
+        white "{{ $a.white }}"
+        orange "{{ $p.orange }}"
+    }
+}
+
+// ─── Behaviour ───────────────────────────────────────────────────────────────
+default_layout "default"
+default_mode "normal"
+// zjstatus draws the status bar; Zellij's own frames would duplicate the
+// information and cost two rows.
+pane_frames false
+// Decision #24: leave the copy to the terminal via OSC52, so yanking on a
+// REMOTE server lands in the LOCAL clipboard, over the SSH connection itself.
+// Setting copy_command here would intercept that and break it.
+copy_on_select true
+copy_clipboard "system"
+scrollback_editor "{{ .editor }}"
+scroll_buffer_size 20000
+mouse_mode true
+// Sessions are named after the host and reattached on login (decision #13);
+// serialising them means a reboot does not lose the layout.
+session_serialization true
+pane_viewport_serialization true
+show_startup_tips false
+show_release_notes false
+
+// ─── Plugins ─────────────────────────────────────────────────────────────────
+plugins {
+    // Auto-lock: while Neovim (or another modal program) has focus, Zellij
+    // enters Locked mode so Ctrl-h and friends reach the editor untouched.
+    autolock location="file:{{ $home }}/.local/share/zellij/plugins/zellij-autolock.wasm" {
+        is_enabled true
+        triggers "nvim|vim|git|fzf|zellij|lazygit|k9s|btop"
+        reaction_seconds "0.3"
+        print_to_log true
+    }
+}
+
+load_plugins {
+    autolock
+}
+
+// ─── Keybindings ─────────────────────────────────────────────────────────────
+// `keybinds` without `clear-defaults=true` LAYERS on top of the stock scheme,
+// which is the whole point of decision #42 — Ctrl-p/t/n/o/s/g keep their
+// upstream meanings and only the additions below are new.
+keybinds {
+    shared_except "locked" {
+        // Unified navigation. The plugin checks whether the focused pane is
+        // running Neovim; if so it forwards the key, otherwise it moves the
+        // Zellij pane. One muscle memory across both.
+        bind "Ctrl h" {
+            MessagePlugin "file:{{ $home }}/.local/share/zellij/plugins/vim-zellij-navigator.wasm" {
+                name "move_focus";
+                payload "left";
+            };
+        }
+        bind "Ctrl j" {
+            MessagePlugin "file:{{ $home }}/.local/share/zellij/plugins/vim-zellij-navigator.wasm" {
+                name "move_focus";
+                payload "down";
+            };
+        }
+        bind "Ctrl k" {
+            MessagePlugin "file:{{ $home }}/.local/share/zellij/plugins/vim-zellij-navigator.wasm" {
+                name "move_focus";
+                payload "up";
+            };
+        }
+        bind "Ctrl l" {
+            MessagePlugin "file:{{ $home }}/.local/share/zellij/plugins/vim-zellij-navigator.wasm" {
+                name "move_focus";
+                payload "right";
+            };
+        }
+    }
+
+    session {
+        // `room`: fuzzy switch between sessions and project directories.
+        bind "w" {
+            LaunchOrFocusPlugin "file:{{ $home }}/.local/share/zellij/plugins/room.wasm" {
+                floating true
+            };
+            SwitchToMode "Normal";
+        }
+    }
+}

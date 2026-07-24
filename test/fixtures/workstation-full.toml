@@ -1,0 +1,30 @@
+# Test fixture: a GUI workstation running the complete toolchain.
+#
+# A fixture is a real chezmoi config file. It lets any template be rendered for
+# any machine profile with no prompting and no container:
+#
+#   chezmoi execute-template --source . --config test/fixtures/workstation-full.toml < FILE
+#
+# Keys here must stay in lockstep with the [data] block emitted by
+# home/.chezmoi.toml.tmpl. test/render.sh fails loudly when they diverge.
+
+[data]
+    name           = "CI Tester"
+    email          = "ci@example.com"
+    editor         = "nvim"
+
+    profile        = "workstation"
+    tier           = "full"
+    tierRank       = 2
+
+    secretsBackend = "none"
+    gpgSign        = false
+    signingKey     = ""
+
+    # ── Derived once at init, never re-derived in a consumer (§3.2) ──────────
+    fonts          = true
+    terminals      = true
+    autoAttach     = true
+    chsh           = true
+    staleness      = true
+    nodeHeapMB     = 8192

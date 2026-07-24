@@ -1,0 +1,16 @@
+# ~/.zprofile — login shells only.
+#
+# The environment itself comes from ~/.zshenv, which has already run by now.
+# This file is for the handful of things that should happen once per login
+# rather than once per shell.
+
+# State directories the shell writes to. Created here rather than checked on
+# every shell start: one mkdir per login is free, a test per shell is not.
+[ -d "${XDG_STATE_HOME:-$HOME/.local/state}/zsh" ] ||
+    mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/zsh"
+[ -d "${XDG_STATE_HOME:-$HOME/.local/state}/less" ] ||
+    mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/less"
+
+# mise shims are already on PATH from env.sh, which is what lets cron jobs,
+# systemd units and IDEs see the managed toolchain. Interactive shells get the
+# faster `mise activate` hook instead, from interactive.sh.

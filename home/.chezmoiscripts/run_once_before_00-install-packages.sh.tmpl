@@ -1,0 +1,107 @@
+#!/bin/sh
+# Phase 1 — the base OS layer, and nothing more.
+#
+# REQUIRED phase: if this fails there is no shell, no git and no curl, so the
+# script aborts rather than warning.
+#
+# Package lists come from .chezmoidata/packages.toml, one per package manager.
+# Deliberately small (report.md §7.1): only what mise cannot bootstrap, plus
+# build dependencies. Every modern CLI comes from mise instead, so binary names
+# are identical on every distro — no Debian batcat/fdfind rename, no EPEL
+# hunting on RHEL, no version skew between Debian stable and rolling Arch.
+#
+# Two constraints shape this script:
+#   * It must not prompt for sudo unless a package genuinely needs installing.
+#     Every package is checked first, and an already-provisioned machine never
+#     escalates at all.
+#   * It must be safe to re-run. It is `run_once`, but a changed hash re-runs
+#     it, and a partially failed first run must be recoverable.
+
+set -eu
+
+log() { printf '  packages: %s\n' "$*"; }
+die() {
+    printf '  packages: FATAL %s\n' "$*" >&2
+    exit 1
+}
+
+# ─── Privilege ───────────────────────────────────────────────────────────────
+# Resolved once. An unprivileged box with no sudo is a legitimate machine — say
+# so clearly rather than failing with a permission error 40 lines later.
+SUDO=''
+if [ "$(id -u)" -ne 0 ]; then
+    if command -v sudo > /dev/null 2>&1; then
+        SUDO='sudo'
+    elif command -v doas > /dev/null 2>&1; then
+        SUDO='doas'
+    fi
+fi
+
+# ─── Which package manager? ──────────────────────────────────────────────────
+{{ $pkgs := .packages.base -}}
+if command -v apt-get > /dev/null 2>&1; then
+    PM=apt
+    WANT='{{ join " " $pkgs.apt }}'
+    is_installed() { dpkg-query -W -f='${Status}' "$1" 2> /dev/null | grep -q '^install ok installed$'; }
+    do_refresh() { DEBIAN_FRONTEND=noninteractive $SUDO apt-get update -qq; }
+    do_install() { DEBIAN_FRONTEND=noninteractive $SUDO apt-get install -y -qq --no-install-recommends "$@"; }
+elif command -v apk > /dev/null 2>&1; then
+    PM=apk
+    WANT='{{ join " " $pkgs.apk }}'
+    is_installed() { apk info -e "$1" > /dev/null 2>&1; }
+    do_refresh() { $SUDO apk update --quiet; }
+    do_install() { $SUDO apk add --no-cache --quiet "$@"; }
+elif command -v dnf > /dev/null 2>&1; then
+    PM=dnf
+    WANT='{{ join " " $pkgs.dnf }}'
+    is_installed() { rpm -q "$1" > /dev/null 2>&1; }
+    do_refresh() { :; } # dnf refreshes its own metadata
+    do_install() { $SUDO dnf install -y -q "$@"; }
+elif command -v pacman > /dev/null 2>&1; then
+    PM=pacman
+    WANT='{{ join " " $pkgs.pacman }}'
+    is_installed() { pacman -Qi "$1" > /dev/null 2>&1; }
+    do_refresh() { $SUDO pacman -Sy --noconfirm --quiet; }
+    do_install() { $SUDO pacman -S --noconfirm --needed --quiet "$@"; }
+elif command -v zypper > /dev/null 2>&1; then
+    PM=zypper
+    WANT='{{ join " " $pkgs.zypper }}'
+    is_installed() { rpm -q "$1" > /dev/null 2>&1; }
+    do_refresh() { $SUDO zypper --non-interactive refresh > /dev/null; }
+    do_install() { $SUDO zypper --non-interactive install -y "$@"; }
+else
+    die 'no supported package manager (apt/apk/dnf/pacman/zypper)'
+fi
+
+# ─── Only what is actually missing ───────────────────────────────────────────
+MISSING=''
+for pkg in $WANT; do
+    is_installed "$pkg" || MISSING="$MISSING $pkg"
+done
+
+if [ -z "$MISSING" ]; then
+    log "$PM: base layer already complete"
+    exit 0
+fi
+
+log "$PM: installing$MISSING"
+
+if [ -z "$SUDO" ] && [ "$(id -u)" -ne 0 ]; then
+    die "need root to install:$MISSING (no sudo or doas available)"
+fi
+
+do_refresh || die 'package index refresh failed'
+
+# Install as one transaction where possible; fall back to one at a time so a
+# single bad package name on an unusual distro does not cost the whole layer.
+# shellcheck disable=SC2086  # $MISSING is an intentional word-split list
+if ! do_install $MISSING; then
+    log 'batch install failed — retrying individually'
+    failed=''
+    for pkg in $MISSING; do
+        do_install "$pkg" || failed="$failed $pkg"
+    done
+    [ -z "$failed" ] || die "could not install:$failed"
+fi
+
+log "$PM: base layer ready"

@@ -1,0 +1,89 @@
+# ~/.bashrc — interactive bash.
+#
+# Decision #26: full parity with zsh wherever bash permits. The point is that
+# landing in bash — as root, on a box where zsh is not installed, inside a
+# container someone else built — feels like a plainer version of home rather
+# than a different machine.
+#
+# What bash cannot match, and is not faked here: deferred plugin loading,
+# fzf-tab's preview menu, and history substring search on the arrow keys.
+# Everything else below mirrors ~/.zshrc line for line.
+
+# ─── Interactive only ────────────────────────────────────────────────────────
+case $- in
+    *i*) ;;
+    *) return ;;
+esac
+
+{{- if .autoAttach }}
+
+# ─── Zellij auto-attach (decision #13) ───────────────────────────────────────
+# Same guards as ~/.zshrc — see the comment there for why each one matters.
+if [ -z "$ZELLIJ" ] &&
+    [ -z "$ZELLIJ_SKIP" ] &&
+    [ -t 0 ] && [ -t 1 ] &&
+    [ -z "$VSCODE_INJECTION" ] &&
+    [ "$TERM" != "dumb" ] &&
+    command -v zellij >/dev/null 2>&1; then
+    ZELLIJ_AUTO_EXIT=true exec zellij attach --create "${HOSTNAME%%.*}"
+fi
+{{- end }}
+
+# ─── History ─────────────────────────────────────────────────────────────────
+HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/bash/history"
+[ -d "${HISTFILE%/*}" ] || mkdir -p "${HISTFILE%/*}"
+HISTSIZE=100000
+HISTFILESIZE=100000
+HISTCONTROL=ignoreboth:erasedups   # ignorespace + ignoredups, and prune old dupes
+HISTTIMEFORMAT='%F %T '
+shopt -s histappend                # append rather than overwrite on exit
+# Flush after every command, so concurrent shells share history the way
+# zsh's SHARE_HISTORY does.
+PROMPT_COMMAND="history -a; history -n${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+
+# ─── Shell options ───────────────────────────────────────────────────────────
+shopt -s autocd 2>/dev/null        # bare directory name acts as cd  (AUTO_CD)
+shopt -s cdspell                   # fix small typos in cd arguments
+shopt -s dirspell 2>/dev/null
+shopt -s checkwinsize              # keep $LINES/$COLUMNS correct after a resize
+shopt -s globstar 2>/dev/null      # ** recursion            (EXTENDED_GLOB)
+shopt -s nocaseglob                #                         (NO_CASE_GLOB)
+shopt -s no_empty_cmd_completion
+stty -ixon 2>/dev/null             # free Ctrl-s             (NO_FLOW_CONTROL)
+
+# ─── Keybindings — emacs (decision #31) ──────────────────────────────────────
+set -o emacs
+bind 'set completion-ignore-case on'
+bind 'set completion-map-case on'
+bind 'set show-all-if-ambiguous on'
+bind 'set menu-complete-display-prefix on'
+bind 'set colored-stats on'
+bind 'set colored-completion-prefix on'
+bind '"\e[1;5C": forward-word'
+bind '"\e[1;5D": backward-word'
+
+# ─── Completion ──────────────────────────────────────────────────────────────
+# bash-completion is a system package, not a mise tool; both classic locations
+# are checked and neither is required.
+if [ -r /usr/share/bash-completion/bash_completion ]; then
+    # shellcheck disable=SC1091
+    . /usr/share/bash-completion/bash_completion
+elif [ -r /etc/bash_completion ]; then
+    # shellcheck disable=SC1091
+    . /etc/bash_completion
+fi
+
+# ─── Shared layer (bash/zsh parity) ──────────────────────────────────────────
+_dotfiles_shell_dir="${XDG_CONFIG_HOME:-$HOME/.config}/shell"
+for _f in aliases functions pickers interactive secrets; do
+    # shellcheck source=/dev/null
+    [ -r "$_dotfiles_shell_dir/$_f.sh" ] && . "$_dotfiles_shell_dir/$_f.sh"
+done
+unset _f _dotfiles_shell_dir
+
+# Completion for the bookmark functions defined in functions.sh.
+_dotfiles_marks_complete() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    mapfile -t COMPREPLY < <(compgen -W "$(_dotfiles_mark_names)" -- "$cur")
+}
+complete -F _dotfiles_marks_complete jump unmark

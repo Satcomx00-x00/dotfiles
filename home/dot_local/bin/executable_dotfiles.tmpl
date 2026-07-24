@@ -1,0 +1,229 @@
+#!/bin/sh
+# ~/.local/bin/dotfiles — the day-2 entry point (report.md §11).
+#
+# One command for the six things you actually do to a configured machine:
+# update it, edit it, see what changed, check it is healthy, measure it, and
+# remember what it can do.
+#
+# Generated from .chezmoidata/tools.toml, so `doctor` and `help` describe the
+# tier THIS machine was built with — never a hardcoded list that drifts.
+
+set -eu
+
+SOURCE_DIR="${DOTFILES_SOURCE:-$(chezmoi source-path 2> /dev/null || echo "$HOME/.local/share/chezmoi")}"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles"
+HELP_TSV="$DATA_DIR/help.tsv"
+
+TIER={{ .tier | quote }}
+PROFILE={{ .profile | quote }}
+
+c_dim=''; c_bold=''; c_red=''; c_green=''; c_yellow=''; c_reset=''
+if [ -t 1 ]; then
+    c_dim='\033[2m'; c_bold='\033[1m'; c_red='\033[31m'
+    c_green='\033[32m'; c_yellow='\033[33m'; c_reset='\033[0m'
+fi
+
+say() { printf "$1%s${c_reset}\n" "$2"; }
+ok() { printf "  ${c_green}ok${c_reset}    %s\n" "$*"; }
+bad() { printf "  ${c_red}FAIL${c_reset}  %s\n" "$*"; }
+warn() { printf "  ${c_yellow}warn${c_reset}  %s\n" "$*"; }
+
+usage() {
+    cat << 'USAGE'
+dotfiles — manage this machine's configuration
+
+  update     fetch, show what would change, then apply
+  edit       edit a managed file and apply it in one step
+  diff       what would change if you applied right now
+  doctor     health check: tools, externals, drift, startup cost
+  bench      measure interactive shell startup
+  help       search every alias, function, picker and keybinding
+  portable   print the single-file rc for a throwaway host
+  source     print the source directory path
+
+Run `dotfiles help` for the configuration itself; this is just the manager.
+USAGE
+}
+
+# ─── update ──────────────────────────────────────────────────────────────────
+# Decision #34: manual only. Never a background auto-update, never a network
+# call on shell start — just this, when you choose.
+cmd_update() {
+    command -v chezmoi > /dev/null 2>&1 || { bad 'chezmoi not installed'; exit 1; }
+
+    say "$c_bold" 'fetching'
+    git -C "$SOURCE_DIR" fetch --quiet --all --prune 2> /dev/null || warn 'fetch failed (offline?)'
+
+    behind=$(git -C "$SOURCE_DIR" rev-list --count HEAD..@{upstream} 2> /dev/null || echo 0)
+    if [ "$behind" = "0" ]; then
+        ok 'already up to date'
+    else
+        printf '  %s commits behind:\n' "$behind"
+        git -C "$SOURCE_DIR" log --oneline HEAD..@{upstream} 2> /dev/null | sed 's/^/    /'
+        git -C "$SOURCE_DIR" pull --quiet --rebase --autostash || { bad 'pull failed'; exit 1; }
+    fi
+
+    say "$c_bold" 'changes to apply'
+    if chezmoi diff | head -100; then :; fi
+
+    printf '\napply? [y/N] '
+    read -r reply
+    case "$reply" in
+        [yY]*)
+            chezmoi apply
+            mkdir -p "$STATE_DIR"
+            date +%s > "$STATE_DIR/last-apply"
+            rm -f "$STATE_DIR/last-hint"
+            ok 'applied'
+            ;;
+        *) say "$c_dim" 'nothing applied' ;;
+    esac
+}
+
+# ─── doctor ──────────────────────────────────────────────────────────────────
+cmd_doctor() {
+    rc=0
+
+    say "$c_bold" "machine  profile=$PROFILE tier=$TIER"
+
+    say "$c_bold" 'tools'
+    missing=''
+{{- /* Same tier AND `when` filtering as mise/config.toml.tmpl. Without the
+       `when` test, doctor reports win32yank missing on every non-WSL machine
+       in the world — a permanently red health check nobody reads twice. */}}
+{{- $wsl := or (env "WSL_DISTRO_NAME") (stat "/run/WSL") (stat "/proc/sys/fs/binfmt_misc/WSLInterop") }}
+{{- range .tools.list }}
+{{- $skip := and (hasKey . "when") (and (eq (dig "when" "" .) "wsl") (not $wsl)) }}
+{{- if and (le .rank $.tierRank) (not $skip) }}
+{{- $bin := dig "bin" .name . }}
+    command -v {{ $bin | quote }} > /dev/null 2>&1 || missing="$missing {{ .name }}"
+{{- range (dig "bins" (list) .) }}
+    command -v {{ . | quote }} > /dev/null 2>&1 || missing="$missing {{ . }}"
+{{- end }}
+{{- end }}
+{{- end }}
+    if [ -z "$missing" ]; then
+        ok "every tool in tier $TIER is on PATH"
+    else
+        bad "missing:$missing"
+        printf '        fix with: mise install\n'
+        rc=1
+    fi
+
+    say "$c_bold" 'externals'
+    for p in zsh-defer zsh-autosuggestions fast-syntax-highlighting zsh-completions \
+        zsh-history-substring-search fzf-tab; do
+        if [ -d "${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins/$p" ]; then
+            ok "$p"
+        else
+            bad "$p missing — chezmoi apply --refresh-externals"
+            rc=1
+        fi
+    done
+{{- if ge .tierRank 1 }}
+    for w in zjstatus vim-zellij-navigator zellij-autolock room; do
+        if [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zellij/plugins/$w.wasm" ]; then
+            ok "$w.wasm"
+        else
+            warn "$w.wasm missing — Zellij will start without it"
+        fi
+    done
+{{- end }}
+
+    say "$c_bold" 'drift'
+    if command -v chezmoi > /dev/null 2>&1; then
+        drift=$(chezmoi status 2> /dev/null || true)
+        if [ -z "$drift" ]; then
+            ok 'target matches source'
+        else
+            warn 'these differ from the source:'
+            printf '%s\n' "$drift" | sed 's/^/        /'
+        fi
+    fi
+
+    say "$c_bold" 'shell startup'
+    if command -v hyperfine > /dev/null 2>&1; then
+        hyperfine --warmup 3 --runs 15 --style basic 'zsh -ic exit' 2>/dev/null \
+            | grep -E 'Time' | sed 's/^/  /'
+    else
+        # Same measurement as test/bench-inner.sh, without the dependency.
+        total=0
+        i=0
+        while [ "$i" -lt 10 ]; do
+            s=$(date +%s%N)
+            ZELLIJ_SKIP=1 zsh -ic exit > /dev/null 2>&1 || true
+            e=$(date +%s%N)
+            total=$((total + (e - s) / 1000000))
+            i=$((i + 1))
+        done
+        mean=$((total / 10))
+        if [ "$mean" -le 60 ]; then
+            ok "interactive zsh: ${mean} ms (budget 60 ms)"
+        else
+            warn "interactive zsh: ${mean} ms — over the 60 ms budget"
+        fi
+    fi
+
+    say "$c_bold" 'help index'
+    if [ -s "$HELP_TSV" ]; then
+        ok "$(wc -l < "$HELP_TSV" | tr -d ' ') entries"
+    else
+        warn 'not built — chezmoi apply will regenerate it'
+    fi
+
+    return $rc
+}
+
+# ─── help ────────────────────────────────────────────────────────────────────
+# Decision #37. The index is generated at apply time by 50-build-help from the
+# real configuration, so it cannot describe an alias that does not exist.
+cmd_help() {
+    if [ ! -s "$HELP_TSV" ]; then
+        bad 'help index not built yet — run: chezmoi apply'
+        exit 1
+    fi
+
+    # Non-interactive, or a search term given: print, do not launch a picker.
+    if [ $# -gt 0 ] || [ ! -t 1 ] || ! command -v fzf > /dev/null 2>&1; then
+        awk -F'\t' -v q="${1:-}" '
+            q == "" || index($1, q) || index($3, q) || index($4, q) {
+                printf "%-16s %-22s %s\n", $1, $3, $4
+            }' "$HELP_TSV" | sort
+        return 0
+    fi
+
+    awk -F'\t' '{ printf "%-16s %-22s %s\n", $1, $3, $4 }' "$HELP_TSV" \
+        | sort \
+        | fzf --prompt='config ' --header='every alias, function, picker and keybinding this machine has' \
+            --preview-window=hidden --height=80%
+}
+
+# ─── main ────────────────────────────────────────────────────────────────────
+case "${1:-help}" in
+    update | up) cmd_update ;;
+    edit) shift; chezmoi edit --apply "$@" ;;
+    diff) shift; chezmoi diff "$@" ;;
+    doctor | check) cmd_doctor ;;
+    bench)
+        ZELLIJ_SKIP=1 command -v hyperfine > /dev/null 2>&1 \
+            && hyperfine --warmup 5 --runs 30 'zsh -ic exit' 'bash -ic exit' \
+            || cmd_doctor
+        ;;
+    # `dotfiles --help` asks about this command; `dotfiles help` asks about the
+    # configuration. Two different questions, and conflating them means one of
+    # them is unanswerable.
+    -h | --help) usage ;;
+    help)
+        shift 2> /dev/null || true
+        cmd_help "$@"
+        ;;
+    portable) cat "$SOURCE_DIR/../portable.sh" 2> /dev/null || curl -fsSL "${DOTFILES_PORTABLE_URL:-}" ;;
+    source) printf '%s\n' "$SOURCE_DIR" ;;
+    manager | usage) usage ;;
+    *)
+        bad "unknown command: $1"
+        usage
+        exit 2
+        ;;
+esac

@@ -1,0 +1,161 @@
+# ~/.zshrc — interactive zsh.
+#
+# Budget: under 60 ms (report.md §8.1), verified by `make bench`.
+#
+# The shape of this file is the whole performance argument. In order:
+#   1. Bail out immediately if not interactive.
+#   2. Hand off to Zellij before doing ANY work — if we exec, everything below
+#      would have been wasted.
+#   3. Cheap builtins only: history, options, keybindings.
+#   4. compinit, with a cache rebuilt at most daily.
+#   5. The shared bash/zsh layer.
+#   6. Plugins, every one of them deferred past the first prompt.
+#
+# Decision #25: nothing is printed at login. The prompt appears instantly.
+
+# ─── 1. Interactive only ─────────────────────────────────────────────────────
+case $- in
+    *i*) ;;
+    *) return ;;
+esac
+
+{{- if .autoAttach }}
+
+# ─── 2. Zellij auto-attach (decision #13) ────────────────────────────────────
+# Attach to a session named after this host, creating it if absent, so a
+# dropped SSH connection costs nothing.
+#
+# Every guard here matters. Without them this line breaks scp, rsync, remote
+# `ssh host command`, VS Code's server, and any nested shell — all of which are
+# "interactive enough" to reach this file but must never get a multiplexer.
+if [[ -z "$ZELLIJ" ]] &&
+    [[ -z "$ZELLIJ_SKIP" ]] &&
+    [[ -t 0 && -t 1 ]] &&
+    [[ -z "$VSCODE_INJECTION" ]] &&
+    [[ "$TERM" != "dumb" ]] &&
+    command -v zellij >/dev/null 2>&1; then
+    ZELLIJ_AUTO_EXIT=true exec zellij attach --create "${HOST%%.*}"
+fi
+{{- end }}
+
+# ─── 3. History ──────────────────────────────────────────────────────────────
+# Decision #7: a plain history file plus fzf. No daemon, no sync server, no
+# database to corrupt on a box you cannot reach.
+HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
+HISTSIZE=100000
+SAVEHIST=100000
+
+setopt EXTENDED_HISTORY        # timestamp and duration per entry
+setopt SHARE_HISTORY           # across concurrent sessions
+setopt INC_APPEND_HISTORY      # write as you go, not at exit
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_SAVE_NO_DUPS
+setopt HIST_FIND_NO_DUPS
+setopt HIST_REDUCE_BLANKS
+setopt HIST_VERIFY             # expand !! for review, do not run it blind
+setopt HIST_IGNORE_SPACE       # a leading space keeps a command out of history
+
+# ─── 4. Shell options ────────────────────────────────────────────────────────
+setopt AUTO_CD                 # `..` and bare directory names work as cd
+setopt AUTO_PUSHD              # every cd pushes onto the directory stack
+setopt PUSHD_IGNORE_DUPS
+setopt PUSHD_SILENT
+setopt EXTENDED_GLOB
+setopt NO_CASE_GLOB
+setopt NUMERIC_GLOB_SORT
+setopt INTERACTIVE_COMMENTS    # # comments on the command line
+setopt NO_BEEP
+setopt NO_FLOW_CONTROL         # frees Ctrl-s for fzf and search
+setopt LONG_LIST_JOBS
+setopt NOTIFY
+
+# ─── 5. Keybindings — emacs (decision #31) ───────────────────────────────────
+# Ctrl-a/e/w/u/k/r behave identically here, on a stock server, in bash, and in
+# every REPL on earth. Modal editing stays inside Neovim, where it belongs.
+bindkey -e
+
+# Terminal-specific keys that emacs mode leaves unbound.
+bindkey '^[[1;5C' forward-word           # Ctrl-Right
+bindkey '^[[1;5D' backward-word          # Ctrl-Left
+bindkey '^[[3~'   delete-char            # Delete
+bindkey '^[[H'    beginning-of-line
+bindkey '^[[F'    end-of-line
+bindkey '^[[Z'    reverse-menu-complete  # Shift-Tab
+
+# ─── 6. Completion ───────────────────────────────────────────────────────────
+# zsh-completions ships extra definitions; it must join fpath BEFORE compinit,
+# which is why this one plugin cannot be deferred.
+fpath=("${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins/zsh-completions/src" $fpath)
+
+autoload -Uz compinit
+_zcompdump="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"
+[[ -d "${_zcompdump:h}" ]] || mkdir -p "${_zcompdump:h}"
+# Rebuild the dump at most once a day; -C skips the security check the rest of
+# the time. This is the single biggest lever on zsh startup cost.
+if [[ -n ${_zcompdump}(#qN.mh+24) ]]; then
+    compinit -d "$_zcompdump"
+    # Compile it: zsh loads the .zwc form measurably faster.
+    { [[ -s "$_zcompdump" ]] && zcompile -R -- "$_zcompdump" } &!
+else
+    compinit -C -d "$_zcompdump"
+fi
+unset _zcompdump
+
+zstyle ':completion:*' menu no                       # fzf-tab replaces the menu
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|=*' 'l:|=* r:|=*'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:descriptions' format '[%d]'
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompcache"
+zstyle ':completion:*' special-dirs true
+
+# fzf-tab previews, per completion context.
+zstyle ':fzf-tab:complete:cd:*'      fzf-preview 'eza -1 --icons=auto --color=always $realpath 2>/dev/null || ls -1 $realpath'
+zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'eza -1 --icons=auto --color=always $realpath 2>/dev/null || ls -1 $realpath'
+zstyle ':fzf-tab:complete:*:*'       fzf-preview '[[ -f $realpath ]] && (bat --color=always --line-range=:100 $realpath 2>/dev/null || head -100 $realpath)'
+zstyle ':fzf-tab:*' switch-group ',' '.'
+
+# ─── 7. Shared layer (bash/zsh parity) ───────────────────────────────────────
+_dotfiles_shell_dir="${XDG_CONFIG_HOME:-$HOME/.config}/shell"
+for _f in aliases functions pickers interactive secrets; do
+    [[ -r "$_dotfiles_shell_dir/$_f.sh" ]] && source "$_dotfiles_shell_dir/$_f.sh"
+done
+unset _f _dotfiles_shell_dir
+
+# Completion for the bookmark functions defined in functions.sh.
+_dotfiles_marks_complete() { compadd -- ${(f)"$(_dotfiles_mark_names)"} }
+compdef _dotfiles_marks_complete jump unmark
+
+# ─── 8. Plugins, all deferred (decision #2) ──────────────────────────────────
+# zsh-defer queues a command to run after the first prompt is drawn, so the
+# startup cost of everything below is approximately zero. The trade-off is real
+# and accepted (report.md §16): the first ~100 ms of a shell has no syntax
+# highlighting.
+_dotfiles_plugins="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins"
+
+if [[ -r "$_dotfiles_plugins/zsh-defer/zsh-defer.plugin.zsh" ]]; then
+    source "$_dotfiles_plugins/zsh-defer/zsh-defer.plugin.zsh"
+
+    # Order matters: fzf-tab must bind the completion widget before anything
+    # else wraps it, and fast-syntax-highlighting is happiest last.
+    zsh-defer source "$_dotfiles_plugins/fzf-tab/fzf-tab.plugin.zsh"
+    zsh-defer source "$_dotfiles_plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+    zsh-defer source "$_dotfiles_plugins/zsh-history-substring-search/zsh-history-substring-search.zsh"
+    zsh-defer source "$_dotfiles_plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh"
+
+    # Bindings for plugins that only exist once they have loaded.
+    zsh-defer -c 'bindkey "^[[A" history-substring-search-up;
+                  bindkey "^[[B" history-substring-search-down;
+                  bindkey "^P"   history-substring-search-up;
+                  bindkey "^N"   history-substring-search-down'
+fi
+unset _dotfiles_plugins
+
+# Suggestions read from history only — the completion strategy forks a
+# completion pass on every keystroke, which is exactly the cost this setup
+# exists to avoid.
+ZSH_AUTOSUGGEST_STRATEGY=(history)
+ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+ZSH_AUTOSUGGEST_MANUAL_REBIND=1

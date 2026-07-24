@@ -1,0 +1,28 @@
+# Declared consumers of home/.chezmoidata/theme.toml.
+#
+# test/theme-check.sh replaces every colour and theme-name in the data file with
+# a sentinel, re-renders everything, and compares what actually changed against
+# this list — in BOTH directions:
+#
+#   listed here but did not change  -> the file has its colours hardcoded
+#   changed but not listed here     -> a new consumer nobody declared
+#
+# A consumer whose source file does not exist yet is reported as pending rather
+# than failing, so this list can name the finished set while the repo is still
+# being built.
+#
+# Paths are as rendered under the chezmoi target root (no .tmpl suffix),
+# against the workstation-full fixture so every tier's files exist.
+
+.config/shell/theme.sh
+.config/starship.toml
+.config/starship-ascii.toml
+.config/bat/config
+.config/btop/themes/tokyonight.theme
+.config/zellij/config.kdl
+.config/zellij/layouts/default.kdl
+.config/k9s/skins/tokyonight.yaml
+.config/ghostty/config
+.config/alacritty/alacritty.toml
+.config/git/config
+.config/nvim/lua/plugins/colorscheme.lua

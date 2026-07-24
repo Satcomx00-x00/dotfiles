@@ -1,0 +1,75 @@
+{{- $p := .theme.palette -}}
+{{- $r := .theme.roles -}}
+{{- $u := .theme.ui -}}
+# k9s skin — generated from .chezmoidata/theme.toml.
+#
+# Selected by ~/.config/k9s/config.yaml. `full` tier only; .chezmoiignore drops
+# the whole k9s directory below that.
+
+k9s:
+  body:
+    fgColor: &fg "{{ $p.fg }}"
+    bgColor: &bg "{{ $p.bg }}"
+    logoColor: "{{ $p.blue }}"
+  prompt:
+    fgColor: *fg
+    bgColor: "{{ $p.bg_dark }}"
+    suggestColor: "{{ $p.comment }}"
+  info:
+    fgColor: "{{ $p.magenta }}"
+    sectionColor: *fg
+  dialog:
+    fgColor: *fg
+    bgColor: *bg
+    buttonFgColor: *fg
+    buttonBgColor: "{{ $p.magenta }}"
+    buttonFocusFgColor: "{{ $p.bg }}"
+    buttonFocusBgColor: "{{ $p.blue }}"
+    labelFgColor: "{{ $p.orange }}"
+    fieldFgColor: *fg
+  frame:
+    border:
+      fgColor: "{{ $u.border }}"
+      focusColor: "{{ $u.border_active }}"
+    menu:
+      fgColor: *fg
+      keyColor: "{{ $p.magenta }}"
+      numKeyColor: "{{ $p.magenta }}"
+    crumbs:
+      fgColor: "{{ $p.bg }}"
+      bgColor: "{{ $p.blue }}"
+      activeColor: "{{ $p.cyan }}"
+    status:
+      newColor: "{{ $p.cyan }}"
+      modifyColor: "{{ $r.changed }}"
+      addColor: "{{ $r.added }}"
+      errorColor: "{{ $r.error }}"
+      highlightColor: "{{ $p.orange }}"
+      killColor: "{{ $p.comment }}"
+      completedColor: "{{ $p.comment }}"
+    title:
+      fgColor: *fg
+      bgColor: *bg
+      highlightColor: "{{ $p.orange }}"
+      counterColor: "{{ $p.blue }}"
+      filterColor: "{{ $p.magenta }}"
+  views:
+    table:
+      fgColor: *fg
+      bgColor: *bg
+      cursorFgColor: "{{ $p.bg }}"
+      cursorBgColor: "{{ $u.selection_bg }}"
+      header:
+        fgColor: *fg
+        bgColor: *bg
+        sorterColor: "{{ $p.cyan }}"
+    yaml:
+      keyColor: "{{ $p.blue }}"
+      colonColor: "{{ $p.comment }}"
+      valueColor: *fg
+    logs:
+      fgColor: *fg
+      bgColor: *bg
+      indicator:
+        fgColor: "{{ $p.blue }}"
+        bgColor: *bg

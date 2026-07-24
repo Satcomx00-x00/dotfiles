@@ -1,0 +1,77 @@
+# Keybindings, declared once.
+#
+# Two consumers: the Zellij KDL config (for the bindings this repo ADDS) and
+# `dotfiles help` (for all of them, stock included). Decision #42 keeps Zellij's
+# default modal scheme unmodified, so most entries here are documentation of
+# upstream behaviour — marked `stock = true` and never written into the KDL.
+#
+# Neovim keymaps are deliberately absent: the editor dumps its own real keymap
+# during 35-nvim-sync, which is more accurate than any table maintained by hand.
+
+# ═══ Zellij ══════════════════════════════════════════════════════════════════
+
+[[keys.zellij]]
+    key   = "Ctrl p"
+    role  = "Pane mode — new, close, split, focus"
+    stock = true
+
+[[keys.zellij]]
+    key   = "Ctrl t"
+    role  = "Tab mode — new, close, jump by number"
+    stock = true
+
+[[keys.zellij]]
+    key   = "Ctrl n"
+    role  = "Resize mode"
+    stock = true
+
+[[keys.zellij]]
+    key   = "Ctrl o"
+    role  = "Session mode — detach, and the `room` switcher"
+    stock = true
+
+[[keys.zellij]]
+    key   = "Ctrl s"
+    role  = "Scroll and search mode"
+    stock = true
+
+[[keys.zellij]]
+    key   = "Ctrl g"
+    role  = "Lock mode — engaged automatically while Neovim has focus"
+    stock = true
+
+# ── Added by this repo ───────────────────────────────────────────────────────
+[[keys.zellij]]
+    key    = "Ctrl h/j/k/l"
+    role   = "Move focus, crossing the Neovim/Zellij boundary transparently"
+    plugin = "vim-zellij-navigator"
+
+[[keys.zellij]]
+    key    = "Ctrl o w"
+    role   = "Fuzzy session and project switcher"
+    plugin = "room"
+
+# ═══ Shell — the bindings worth knowing about ════════════════════════════════
+# Emacs mode (decision #31): Ctrl-a/e/w/u/k behave identically here, on a stock
+# server, in bash, and in every REPL, so they are not listed. These are the ones
+# this repo adds or rebinds.
+
+[[keys.shell]]
+    key  = "Ctrl-r"
+    role = "fzf history search"
+
+[[keys.shell]]
+    key  = "Ctrl-t"
+    role = "fzf file picker, with a bat preview"
+
+[[keys.shell]]
+    key  = "Alt-c"
+    role = "fzf directory jump, with an eza preview"
+
+[[keys.shell]]
+    key  = "Up / Down"
+    role = "History substring search on what you have already typed"
+
+[[keys.shell]]
+    key  = "Tab"
+    role = "fzf-tab completion menu with previews"

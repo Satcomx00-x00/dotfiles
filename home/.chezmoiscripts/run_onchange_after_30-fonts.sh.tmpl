@@ -1,0 +1,37 @@
+{{- if .fonts -}}
+#!/bin/sh
+# Phase 6 — refresh the font cache after the Nerd Font external lands.
+#
+# Renders to nothing at all on a server or container: the whole file is inside
+# a template conditional, so those machines get an empty script that chezmoi
+# skips. That is cheaper and clearer than a script that runs in order to decide
+# it has nothing to do.
+#
+# font external: {{ (index .chezmoi "sourceFile") }}
+# hash: {{ include ".chezmoiexternal.toml.tmpl" | sha256sum }}
+#
+# OPTIONAL phase: a stale font cache costs you glyphs, not a working machine.
+
+set -eu
+
+log() { printf '  fonts: %s\n' "$*"; }
+
+FONTDIR="${XDG_DATA_HOME:-$HOME/.local/share}/fonts"
+
+[ -d "$FONTDIR" ] || {
+    log 'no font directory — nothing to cache'
+    exit 0
+}
+
+if ! command -v fc-cache > /dev/null 2>&1; then
+    log 'WARN fontconfig not installed; the font is on disk but not registered'
+    exit 0
+fi
+
+# -f force, so a replaced file with the same name is picked up.
+if fc-cache -f "$FONTDIR" > /dev/null 2>&1; then
+    log "cache rebuilt ($(find "$FONTDIR" -name '*.ttf' -o -name '*.otf' 2> /dev/null | wc -l | tr -d ' ') files)"
+else
+    log 'WARN fc-cache failed'
+fi
+{{- end -}}

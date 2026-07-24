@@ -1,0 +1,180 @@
+{{- $p := .theme.palette -}}
+{{- $r := .theme.roles -}}
+# ~/.config/git/config
+#
+# Decision #35 removes the work/personal split entirely: one name, one email,
+# one signing key, everywhere. There is no conditional include, no second
+# config file, and no chance of committing under the wrong identity because you
+# cloned into the wrong directory.
+#
+# delta's colours come from .chezmoidata/theme.toml, so `git diff` and `bat`
+# agree on what a keyword looks like.
+
+[user]
+	name = {{ .name | quote }}
+	email = {{ .email | quote }}
+{{- if and .gpgSign .signingKey }}
+	signingkey = {{ .signingKey | quote }}
+{{- end }}
+
+[init]
+	defaultBranch = main
+
+[core]
+	editor = {{ .editor | quote }}
+	pager = delta
+	excludesfile = ~/.config/git/ignore
+	# Avoid the "unsafe repository" refusal on shared or bind-mounted trees.
+	fsmonitor = false
+	untrackedCache = true
+	autocrlf = input
+
+[pull]
+	# Rebase with autostash: a `git pull` on a dirty tree neither refuses nor
+	# creates a merge commit that says nothing.
+	rebase = true
+
+[rebase]
+	autoStash = true
+	autoSquash = true
+	updateRefs = true
+
+[push]
+	default = simple
+	# No more "fatal: The current branch has no upstream branch".
+	autoSetupRemote = true
+	followTags = true
+
+[fetch]
+	prune = true
+	pruneTags = true
+	all = true
+
+[merge]
+	# zdiff3 shows the common ancestor in a conflict, which is the difference
+	# between resolving it and guessing.
+	conflictStyle = zdiff3
+	ff = only
+
+[diff]
+	# histogram produces more readable hunks than the default myers on code
+	# that has been moved around.
+	algorithm = histogram
+	colorMoved = default
+	mnemonicPrefix = true
+	renames = true
+
+[rerere]
+	# Remember conflict resolutions, so a long rebase does not ask twice.
+	enabled = true
+	autoupdate = true
+
+[commit]
+	# Show the diff while writing the message.
+	verbose = true
+{{- if and .gpgSign .signingKey }}
+	gpgsign = true
+{{- end }}
+
+{{- if and .gpgSign .signingKey }}
+
+[gpg]
+	format = ssh
+
+[gpg "ssh"]
+	allowedSignersFile = ~/.config/git/allowed_signers
+{{- end }}
+
+[branch]
+	# Most recently used first — `git branch` is a list you scan, not sort.
+	sort = -committerdate
+
+[tag]
+	sort = version:refname
+
+[status]
+	showUntrackedFiles = all
+	submoduleSummary = true
+
+[log]
+	date = iso
+
+[help]
+	# Suggest, do not run. `git psuh` should not silently become `git push`.
+	autocorrect = prompt
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	features = tokyonight
+	navigate = true          # n / N move between diff sections
+	side-by-side = true
+	line-numbers = true
+	hyperlinks = true
+	true-color = always
+
+[delta "tokyonight"]
+	syntax-theme = {{ .theme.bat }}
+	# Colours from .chezmoidata/theme.toml — the same green that means "added"
+	# in gitsigns, lualine and the prompt.
+	plus-style = "syntax {{ $p.bg_highlight }}"
+	plus-emph-style = "syntax {{ $r.added }}"
+	minus-style = "syntax {{ $p.bg_highlight }}"
+	minus-emph-style = "syntax {{ $r.removed }}"
+	line-numbers-minus-style = "{{ $r.removed }}"
+	line-numbers-plus-style = "{{ $r.added }}"
+	line-numbers-zero-style = "{{ $p.comment }}"
+	line-numbers-left-style = "{{ $p.blue7 }}"
+	line-numbers-right-style = "{{ $p.blue7 }}"
+	file-style = "bold {{ $p.blue }}"
+	file-decoration-style = "{{ $p.blue7 }} ul"
+	hunk-header-style = "file line-number syntax"
+	hunk-header-decoration-style = "{{ $p.blue7 }} box"
+	blame-palette = "{{ $p.bg }} {{ $p.bg_dark }} {{ $p.bg_highlight }}"
+
+[color]
+	ui = auto
+
+[color "branch"]
+	current = green bold
+	local = normal
+	remote = cyan
+
+[color "status"]
+	added = green
+	changed = yellow
+	untracked = red
+
+# ─── Aliases ─────────────────────────────────────────────────────────────────
+# Deliberately short, and deliberately here rather than as shell aliases: these
+# work over plain `git` on a machine that has never seen this repository.
+[alias]
+	st = status -sb
+	co = checkout
+	sw = switch
+	br = branch
+	ci = commit
+	cm = commit -m
+	amend = commit --amend --no-edit
+	unstage = restore --staged
+	last = log -1 HEAD --stat
+	# The graph you actually want to look at.
+	lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) %C(auto)%d%C(reset) %s %C(dim white)(%an, %ar)%C(reset)'
+	lga = lg --all
+	# Undo the last commit but keep the work.
+	undo = reset --soft HEAD~1
+	# What am I about to push?
+	pending = log @{upstream}..HEAD --oneline
+	# What did I miss?
+	incoming = log HEAD..@{upstream} --oneline
+	sync = !git fetch --all --prune && git pull --rebase --autostash
+	aliases = config --get-regexp '^alias\\.'
+	root = rev-parse --show-toplevel
+
+[url "https://github.com/"]
+	insteadOf = gh:
+
+[advice]
+	detachedHead = false
+	skippedCherryPicks = false

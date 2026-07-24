@@ -1,0 +1,11 @@
+# ~/.zshenv — read by EVERY zsh invocation, including non-interactive ones.
+#
+# This file runs for `ssh host command`, for scp, for rsync, and for every
+# script with a zsh shebang. It must therefore be silent and fast, and it must
+# not assume a terminal exists.
+#
+# It does exactly one thing: load the shared POSIX environment. Everything
+# interactive lives in ~/.zshrc.
+
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/shell/env.sh" ] &&
+    . "${XDG_CONFIG_HOME:-$HOME/.config}/shell/env.sh"

@@ -1,0 +1,76 @@
+{{- /* Written 0600 by the private_ attribute on both the directory and this
+       file — ssh silently ignores a config anyone else can read. */ -}}
+# ~/.ssh/config — performance and hardening (decision #17).
+#
+# ── Decision #30: this file contains NO hostnames ────────────────────────────
+# Your actual hosts live in ~/.ssh/config.d/, which is NOT managed by chezmoi,
+# never committed, and included at the END of this file. That is what lets this
+# repository be public without being a map of your estate.
+#
+# To add a host:
+#     mkdir -p ~/.ssh/config.d && chmod 700 ~/.ssh/config.d
+#     $EDITOR ~/.ssh/config.d/work.conf
+#
+# Include comes LAST deliberately. OpenSSH takes the FIRST value it sees for
+# any keyword, so a later Host block cannot override an earlier one — putting
+# the include at the end would make your per-host settings unable to win.
+
+Include config.d/*
+
+Host *
+    # ── Performance ──────────────────────────────────────────────────────────
+    # ControlMaster: the 2nd..Nth connection to a host reuses the first one's
+    # authenticated channel and skips the handshake entirely. This is what
+    # makes a git push to a host you are already on feel instant.
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h-%p
+    ControlPersist 10m
+
+    # Fail fast rather than hanging: three missed 20-second probes and the
+    # connection is declared dead, so a flaky link drops instead of freezing
+    # your terminal for fifteen minutes.
+    ServerAliveInterval 20
+    ServerAliveCountMax 3
+    TCPKeepAlive no
+
+    # Compression costs CPU and saves nothing on a modern link; it only helps
+    # on a genuinely slow one, where you can enable it per host in config.d.
+    Compression no
+
+    # ── Hardening ────────────────────────────────────────────────────────────
+    # Modern algorithms only. Anything older is either broken or on its way.
+    KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512
+    Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+    MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+    HostKeyAlgorithms ssh-ed25519,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512,rsa-sha2-256
+    PubkeyAcceptedAlgorithms ssh-ed25519,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-512,rsa-sha2-256
+
+    # Agent forwarding exposes your agent to anyone with root on the remote
+    # host. Off by default, opt in per host in config.d where you trust it.
+    ForwardAgent no
+    ForwardX11 no
+    ForwardX11Trusted no
+
+    # `ask` rather than `accept-new`: a changed host key should stop you.
+    StrictHostKeyChecking ask
+    HashKnownHosts yes
+    VerifyHostKeyDNS ask
+
+    # Only offer the key configured for a host, rather than every key in the
+    # agent in turn — which both leaks your public keys and trips MaxAuthTries.
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+
+    # Never fall back to a password prompt on a host expecting a key; that
+    # prompt is where credentials get typed into the wrong machine.
+    PreferredAuthentications publickey,keyboard-interactive
+    PasswordAuthentication no
+
+    # ── Environment ──────────────────────────────────────────────────────────
+    # Send only what the remote shell needs for colours and OSC52 to work.
+    # Sending LC_* wholesale produces locale warnings on half the servers alive.
+    SendEnv LANG LC_CTYPE COLORTERM
+
+    # ── Housekeeping ─────────────────────────────────────────────────────────
+    HostKeyAlias %h
+    Protocol 2

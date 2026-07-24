@@ -41,3 +41,6 @@ __pycache__/
 # Personal notes (keep local)
 NOTES.md
 TODO.md
+
+# Build output from the test harness
+.build/

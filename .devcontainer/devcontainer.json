@@ -1,0 +1,50 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "dotfiles",
+
+  // Decision #36: the pre-baked image. A Codespace that bootstraps from scratch
+  // on every rebuild wastes four minutes each time and needs a working network
+  // at exactly the wrong moment.
+  "build": {
+    "dockerfile": "../Containerfile",
+    "context": "..",
+    "args": {
+      "PROFILE": "container",
+      "TIER": "standard"
+    }
+  },
+
+  "remoteUser": "root",
+  "workspaceFolder": "/workspace",
+
+  "containerEnv": {
+    // Codespaces and VS Code both attach to a shell; a multiplexer here would
+    // nest inside the editor's own terminal management.
+    "ZELLIJ_SKIP": "1"
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": { "path": "/usr/bin/zsh", "args": ["-l"] }
+        },
+        "editor.formatOnSave": true,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true
+      },
+      "extensions": [
+        "timonwong.shellcheck",
+        "foxundermoon.shell-format",
+        "tamasfe.even-better-toml",
+        "editorconfig.editorconfig"
+      ]
+    }
+  },
+
+  // The repo's own checks, so a fresh Codespace proves itself before you start.
+  "postCreateCommand": "make check || true",
+
+  "features": {}
+}

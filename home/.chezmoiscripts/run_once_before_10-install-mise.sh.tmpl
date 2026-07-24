@@ -1,0 +1,48 @@
+#!/bin/sh
+# Phase 2 — install mise itself.
+#
+# REQUIRED phase: every tool in §7.3 onwards comes from mise, so a failure here
+# aborts. The base layer from phase 1 still leaves a working shell, which is the
+# mitigation recorded in report.md §16 for "mise sits between you and every CLI".
+#
+# mise is NOT installed by mise (obviously) and not by the OS package manager
+# either — distro packages of mise are old and inconsistently named. It is a
+# single static binary from the official installer, placed in ~/.local/bin,
+# which env.sh already has on PATH.
+
+set -eu
+
+log() { printf '  mise: %s\n' "$*"; }
+
+BIN="${XDG_BIN_HOME:-$HOME/.local/bin}"
+export PATH="$BIN:$PATH"
+
+if command -v mise > /dev/null 2>&1; then
+    log "already installed ($(mise --version 2> /dev/null | head -1))"
+    exit 0
+fi
+
+command -v curl > /dev/null 2>&1 || {
+    printf '  mise: FATAL curl is missing — phase 1 should have installed it\n' >&2
+    exit 1
+}
+
+mkdir -p "$BIN"
+log 'installing to '"$BIN"
+
+# This is the residual supply-chain exposure recorded in report.md §16: the
+# installer is piped to a shell without checksum verification. Everything mise
+# then installs IS verified, because the aqua backend carries cosign/SLSA
+# signatures (decision #47) — so the untrusted surface is this one fetch, not
+# the other seventy.
+if ! curl -fsSL https://mise.run | MISE_INSTALL_PATH="$BIN/mise" MISE_QUIET=1 sh; then
+    printf '  mise: FATAL install failed\n' >&2
+    exit 1
+fi
+
+command -v mise > /dev/null 2>&1 || {
+    printf '  mise: FATAL installed but not on PATH (%s)\n' "$BIN" >&2
+    exit 1
+}
+
+log "installed ($(mise --version 2> /dev/null | head -1))"

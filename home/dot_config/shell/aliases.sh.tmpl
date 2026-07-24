@@ -1,16 +1,21 @@
 # shellcheck shell=sh
 # ~/.config/shell/aliases.sh — aliases shared by bash and zsh.
 #
-# POSIX only. Every alias that depends on a modern CLI is guarded, so this file
+# POSIX only. Every alias depending on a modern CLI is guarded, so this file
 # degrades cleanly on a stock server where none of them are installed yet.
+#
+# `# @group` headers below are load-bearing: 50-build-help.sh parses them into
+# ~/.local/share/dotfiles/help.tsv, which is what `dotfiles help` shows. A
+# definition outside a group fails `make lint-help`.
 
-# ─── Navigation ──────────────────────────────────────────────────────────────
+# @group nav — moving around
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
 alias -- -='cd -'
 
-# ─── Listing: eza when available, coreutils ls otherwise ─────────────────────
+# @group ls — listing files
+# eza when available, coreutils ls otherwise.
 if command -v eza >/dev/null 2>&1; then
     alias ls='eza --group-directories-first --icons=auto'
     alias ll='eza -l --group-directories-first --icons=auto --git --time-style=long-iso'
@@ -20,61 +25,69 @@ if command -v eza >/dev/null 2>&1; then
     alias lsize='eza -l --sort=size --reverse --icons=auto'
     alias lmod='eza -l --sort=modified --reverse --icons=auto --time-style=long-iso'
 else
-    # GNU ls understands --color; BusyBox/BSD ls does not and would error out,
-    # so probe once here rather than shipping an alias that breaks on Alpine.
-    if ls --color=auto . >/dev/null 2>&1; then
-        alias ls='ls --color=auto'
-    fi
+    # GNU ls understands --color; BusyBox/BSD ls does not and would error out.
+    # The probe runs at APPLY time (§3.2), not on every shell start: whether
+    # this machine's ls is GNU cannot change between now and the next apply,
+    # and a `ls --color=auto . >/dev/null` here would be a fork per shell.
+{{- if output "sh" "-c" "ls --color=auto . >/dev/null 2>&1 && echo y || true" | trim }}
+    alias ls='ls --color=auto'
+{{- end }}
     alias ll='ls -lh'
     alias la='ls -lAh'
     alias lt='ls -lhtr'
 fi
 
-# ─── cat / less: bat when available ──────────────────────────────────────────
+# @group view — reading files
 if command -v bat >/dev/null 2>&1; then
     alias cat='bat --paging=never'
-    alias catp='bat --paging=never --plain'   # no line numbers, pipe-friendly
+    # @help bat without line numbers or decorations — safe to pipe
+    alias catp='bat --paging=never --plain'
     alias less='bat --paging=always'
 fi
 
-# ─── grep / find ─────────────────────────────────────────────────────────────
+# @group search — finding things
 alias grep='grep --color=auto'
 alias egrep='grep -E --color=auto'
 alias fgrep='grep -F --color=auto'
+# @help ripgrep including hidden and ignored files
 command -v rg >/dev/null 2>&1 && alias rga='rg --hidden --no-ignore --glob "!.git"'
+# @help fd including hidden and ignored files
 command -v fd >/dev/null 2>&1 && alias fda='fd --hidden --no-ignore --exclude .git'
 
-# ─── Safety rails ────────────────────────────────────────────────────────────
-# -i on rm/cp/mv only affects INTERACTIVE use; scripts calling /bin/rm are
-# unaffected because aliases are not expanded in non-interactive shells.
+# @group safety — rails on destructive commands
+# -i affects INTERACTIVE use only; scripts calling /bin/rm are unaffected,
+# because aliases are not expanded in non-interactive shells.
 alias rm='rm -i'
 alias cp='cp -i'
 alias mv='mv -i'
 alias mkdir='mkdir -p'
 alias ln='ln -i'
-# --preserve-root is GNU-only; BusyBox coreutils would reject it outright.
-if chown --help 2>&1 | grep -q -- --preserve-root; then
-    alias chown='chown --preserve-root'
-    alias chmod='chmod --preserve-root'
-fi
+# --preserve-root is GNU-only; BusyBox coreutils rejects it outright. Probed at
+# apply time for the same reason as ls above — this was two forks per shell.
+{{- if output "sh" "-c" "chown --help 2>&1 | grep -q -- --preserve-root && echo y || true" | trim }}
+alias chown='chown --preserve-root'
+alias chmod='chmod --preserve-root'
+{{- end }}
 
-# ─── Disk / system ───────────────────────────────────────────────────────────
+# @group system — disk, processes, network
 alias df='df -h'
 alias du='du -h'
 alias free='free -h'
-command -v duf  >/dev/null 2>&1 && alias df='duf'
+command -v duf >/dev/null 2>&1 && alias df='duf'
 command -v dust >/dev/null 2>&1 && alias du='dust'
 command -v btop >/dev/null 2>&1 && alias top='btop'
-command -v procs >/dev/null 2>&1 && alias ps='procs'
-
+# @help PATH, one entry per line
 alias path='printf "%s\n" $PATH | tr ":" "\n"'
 alias now='date "+%Y-%m-%d %H:%M:%S"'
+# @help current time as an ISO-8601 UTC timestamp
 alias utc='date -u "+%Y-%m-%dT%H:%M:%SZ"'
+# @help listening TCP/UDP sockets with owning processes
 alias ports='ss -tulpn 2>/dev/null || netstat -tulpn'
+# @help this machine's public IP address
 alias myip='curl -fsSL https://ifconfig.me && echo'
 
-# ─── Git ─────────────────────────────────────────────────────────────────────
-# Deliberately short set. Anything more elaborate lives as a git alias in
+# @group git — version control
+# Deliberately short. Anything more elaborate lives as a git alias in
 # ~/.config/git/config, so it works over plain `git` on machines without these.
 alias g='git'
 alias gs='git status -sb'
@@ -82,12 +95,14 @@ alias ga='git add'
 alias gaa='git add -A'
 alias gc='git commit'
 alias gcm='git commit -m'
+# @help amend the last commit, keeping its message
 alias gca='git commit --amend --no-edit'
 alias gco='git checkout'
 alias gsw='git switch'
 alias gb='git branch'
 alias gd='git diff'
 alias gds='git diff --staged'
+# @help commit graph, one line each
 alias gl='git log --graph --abbrev-commit --decorate --format=format:"%C(bold blue)%h%C(reset) %C(auto)%d%C(reset) %s %C(dim white)(%an, %ar)%C(reset)"'
 alias gp='git push'
 alias gpl='git pull --rebase --autostash'
@@ -96,9 +111,26 @@ alias gst='git stash'
 alias gstp='git stash pop'
 command -v lazygit >/dev/null 2>&1 && alias lg='lazygit'
 
-{{- if ne .toolset "minimal" }}
+# @group pkg — package managers (decision #39: bun and uv are the defaults)
+if command -v bun >/dev/null 2>&1; then
+    alias b='bun'
+    alias bi='bun install'
+    alias br='bun run'
+    alias bx='bunx'
+fi
+if command -v uv >/dev/null 2>&1; then
+    # @help run a Python tool without installing it
+    alias ux='uvx'
+    alias uvs='uv sync'
+    alias uva='uv add'
+    # @help run a command inside the project environment
+    alias uvr='uv run'
+fi
+command -v mise >/dev/null 2>&1 && alias mi='mise'
 
-# ─── Containers ──────────────────────────────────────────────────────────────
+{{- if ge .tierRank 1 }}
+
+# @group docker — containers
 if command -v docker >/dev/null 2>&1; then
     alias d='docker'
     alias dps='docker ps --format "table {{`{{.Names}}`}}\t{{`{{.Status}}`}}\t{{`{{.Ports}}`}}"'
@@ -106,6 +138,7 @@ if command -v docker >/dev/null 2>&1; then
     alias di='docker images'
     alias dex='docker exec -it'
     alias dlog='docker logs -f --tail=100'
+    # @help remove all unused images, containers and volumes
     alias dprune='docker system prune -af --volumes'
     alias dc='docker compose'
     alias dcu='docker compose up -d'
@@ -115,9 +148,9 @@ fi
 command -v lazydocker >/dev/null 2>&1 && alias ld='lazydocker'
 {{- end }}
 
-{{- if eq .toolset "full" }}
+{{- if ge .tierRank 2 }}
 
-# ─── Kubernetes ──────────────────────────────────────────────────────────────
+# @group k8s — Kubernetes
 if command -v kubectl >/dev/null 2>&1; then
     alias k='kubectl'
     alias kg='kubectl get'
@@ -131,10 +164,11 @@ if command -v kubectl >/dev/null 2>&1; then
     alias kaf='kubectl apply -f'
     alias kdf='kubectl delete -f'
     alias kctx='kubectl config use-context'
+    # @help set the current namespace
     alias kns='kubectl config set-context --current --namespace'
 fi
 
-# ─── Terraform / OpenTofu ────────────────────────────────────────────────────
+# @group tf — Terraform and OpenTofu
 if command -v terraform >/dev/null 2>&1; then
     alias tf='terraform'
     alias tfi='terraform init'
@@ -144,26 +178,32 @@ if command -v terraform >/dev/null 2>&1; then
     alias tff='terraform fmt -recursive'
     alias tfv='terraform validate'
 fi
+command -v tofu >/dev/null 2>&1 && alias to='tofu'
 {{- end }}
 
-# ─── Dotfiles management (chezmoi) ───────────────────────────────────────────
+# @group dot — these dotfiles
 if command -v chezmoi >/dev/null 2>&1; then
     alias cm='chezmoi'
+    # @help edit a managed file and apply it in one step
     alias cme='chezmoi edit --apply'
     alias cma='chezmoi apply'
     alias cmd='chezmoi diff'
     alias cmu='chezmoi update'
+    # @help cd to the dotfiles source directory
     alias cmcd='cd "$(chezmoi source-path)"'
 fi
 
-# ─── Misc quality of life ────────────────────────────────────────────────────
+# @group misc — quality of life
+# @help replace this shell with a fresh login shell
 alias reload='exec "$SHELL" -l'
 alias please='sudo'
-alias sudoe='sudo -E '            # trailing space: expands the NEXT alias too
-alias watch='watch '              # same trick, so `watch kgp` works
+# @help sudo preserving the environment; trailing space expands the next alias
+alias sudoe='sudo -E '
+# @help trailing space, so `watch kgp` expands the alias too
+alias watch='watch '
 alias h='history'
 alias c='clear'
 alias e='$EDITOR'
+# @help serve the current directory over HTTP on port 8000
 alias serve='python3 -m http.server 8000'
 alias jsonpp='jq .'
-alias urlencode='python3 -c "import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1]))"'

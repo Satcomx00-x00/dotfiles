@@ -1,0 +1,20 @@
+# ~/.config/ripgrep/config — read via $RIPGREP_CONFIG_PATH, set in env.sh.
+#
+# Not themed: ripgrep's colours come through fzf and bat, which are.
+
+--smart-case
+--hidden
+--follow
+--max-columns=200
+--max-columns-preview
+
+# Noise that is never what you were searching for.
+--glob=!.git/*
+--glob=!node_modules/*
+--glob=!.venv/*
+--glob=!__pycache__/*
+--glob=!target/*
+--glob=!dist/*
+--glob=!build/*
+--glob=!*.lock
+--glob=!.terraform/*

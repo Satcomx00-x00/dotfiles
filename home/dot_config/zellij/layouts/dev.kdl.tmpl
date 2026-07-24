@@ -1,0 +1,15 @@
+{{- /* `zellij --layout dev` — editor, a terminal, and somewhere for logs. */ -}}
+layout {
+    tab name="code" focus=true {
+        pane split_direction="vertical" {
+            pane size="70%" command="{{ .editor }}"
+            pane split_direction="horizontal" {
+                pane name="shell"
+                pane name="logs"
+            }
+        }
+    }
+    tab name="git" {
+        pane command="lazygit"
+    }
+}
