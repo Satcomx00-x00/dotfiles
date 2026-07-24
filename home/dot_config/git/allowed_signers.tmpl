@@ -6,5 +6,5 @@
   Format: <principal> <key-type> <public-key>
 */ -}}
 {{- if and .gpgSign .signingKey }}
-{{ .email }} {{ if hasPrefix "ssh-" .signingKey }}{{ .signingKey }}{{ else }}{{ output "sh" "-c" (printf "cat '%s' 2>/dev/null || true" .signingKey) | trim }}{{ end }}
+{{ .identity.email }} {{ if hasPrefix "ssh-" .signingKey }}{{ .signingKey }}{{ else }}{{ output "sh" "-c" (printf "cat '%s' 2>/dev/null || true" .signingKey) | trim }}{{ end }}
 {{- end }}

@@ -80,8 +80,13 @@ fi
 
 # ─── Identity actually landed ────────────────────────────────────────────────
 if [ -f "$HOME/.config/git/config" ]; then
-    check 'git config --file "$HOME/.config/git/config" --get user.email | grep -q ci@example.com' \
-        'git identity from prompts'
+    # The identity is repo data now, so this asserts the value in
+    # .chezmoidata/identity.toml actually reached the target — read from the
+    # data file rather than duplicated here.
+    want=$(sed -n 's/^[[:space:]]*email[[:space:]]*=[[:space:]]*"\(.*\)".*/\1/p' \
+        /src/home/.chezmoidata/identity.toml | head -1)
+    check "git config --file \"\$HOME/.config/git/config\" --get user.email | grep -qF '$want'" \
+        'git identity from identity.toml'
 fi
 
 # ─── Tools present, list computed from tools.toml ────────────────────────────

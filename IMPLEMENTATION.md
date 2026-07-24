@@ -96,6 +96,7 @@ by chezmoi and are the input to everything else.
 
 | Source | Consumers |
 | --- | --- |
+| `identity.toml` — who this repo belongs to | git config · SSH allowed-signers · `$EDITOR` in the shell · Zellij scrollback editor and dev layout · Claude settings |
 | `theme.toml` — Tokyo Night, once, as hex | starship palette · zellij theme · zjstatus format · bat · delta · `FZF_DEFAULT_OPTS` · `EZA_COLORS` · btop · k9s skin · ghostty · alacritty · tokyonight.nvim overrides · lualine |
 | `tools.toml` — every tool, with tier and role | `mise/config.toml` · the mise install script's re-run hash · `dotfiles doctor` probe manifest · `dotfiles help` tool section · README inventory table · CI apply assertions |
 | `packages.toml` — base OS layer per distro | `run_once_before_00-install-packages` (already true today) |
@@ -566,7 +567,30 @@ found only by executing the result, which is the argument for stage 0.
 | `dotfiles help <term>` matched everything — an awk filter concatenated fields instead of testing them | Running `dotfiles help git` | — |
 | `win32yank` has no aqua registry entry | `verify-tools` | The documented `github` fallback (#47) |
 
-### 10.4 Accepted limitations
+### 10.4 Amendment: identity is repo data, not a prompt
+
+`report.md` §6 and §11 describe an install that "prompts for identity and
+profile". That was written for a repository that might be forked. This one is
+not — it is personal — so the three identity questions had the same answer every
+time and have been removed.
+
+| Was | Is |
+| --- | --- |
+| `chezmoi init` asks 8 questions | Asks 5: profile, tier, secrets backend, signing on/off, signing key |
+| Name, email, editor supplied per machine | `home/.chezmoidata/identity.toml`, one file, five consumers |
+| `DOTFILES_NAME` / `DOTFILES_EMAIL` / `DOTFILES_EDITOR` env overrides | Removed from `install.sh` and the `Containerfile` |
+
+This strengthens decision #35 rather than weakening it: "one identity
+everywhere" is now true by construction instead of by answering a prompt
+consistently.
+
+Decision #30 is untouched. It governs **infrastructure** metadata — hostnames,
+internal domains, vault item names — none of which is in `identity.toml` or
+anywhere else in the tree. The email is GitHub's noreply form, which already
+appears in the author field of every commit in this public repository, so
+publishing it in a config file adds no exposure that `git log` does not.
+
+### 10.5 Accepted limitations
 
 Beyond those already in `report.md` §16:
 

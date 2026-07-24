@@ -4,10 +4,9 @@
 # combination, so anything that survives it is safe on a throwaway host.
 
 [data]
-    name           = "CI Tester"
-    email          = "ci@example.com"
-    editor         = "nvim"
-
+    # Identity is NOT here: it lives in home/.chezmoidata/identity.toml, which
+    # is repo data rather than a per-machine answer. Fixtures carry only what
+    # `chezmoi init` actually asks.
     profile        = "container"
     tier           = "minimal"
     tierRank       = 0

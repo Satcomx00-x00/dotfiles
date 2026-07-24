@@ -1,0 +1,32 @@
+# Who this repository belongs to.
+#
+# This is a personal dotfiles repository, not a template someone else forks, so
+# there is no reason to ask three questions on every install whose answers are
+# always the same. They live here instead, and `chezmoi init` only asks about
+# the things that genuinely differ between machines: profile, tier, and secrets.
+#
+# ── On this being public ─────────────────────────────────────────────────────
+# Nothing here is an exposure that git does not already create: the name and
+# email are in the author field of every commit. The address is GitHub's noreply
+# form, which is a real deliverable address for GitHub notifications and is not
+# your personal mailbox — so it is safe to publish and safe to scrape.
+#
+# Decision #30 is unaffected. It is about INFRASTRUCTURE metadata — hostnames,
+# internal domains, vault item names — none of which is here or anywhere else in
+# the tree. Those still live in ~/.ssh/config.d/ and ~/.config/shell/local.sh.
+#
+# Decision #35 still holds: one identity, everywhere. That is now enforced by
+# construction rather than by answering the prompt the same way every time.
+
+[identity]
+    name  = "Satcom"
+    email = "47340064+Satcomx00-x00@users.noreply.github.com"
+
+    # Used by install.sh and the README, so the repository URL is written once.
+    github = "Satcomx00-x00"
+    repo   = "https://github.com/Satcomx00-x00/dotfiles"
+
+    # A preference, not a machine property. env.sh still falls back down the
+    # chain (nvim -> vim -> vi) on a box where this is not installed, so a
+    # `minimal` tier with no Neovim is handled without asking.
+    editor = "nvim"

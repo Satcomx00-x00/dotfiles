@@ -2,10 +2,9 @@
 # See test/fixtures/workstation-full.toml for what a fixture is.
 
 [data]
-    name           = "CI Tester"
-    email          = "ci@example.com"
-    editor         = "nvim"
-
+    # Identity is NOT here: it lives in home/.chezmoidata/identity.toml, which
+    # is repo data rather than a per-machine answer. Fixtures carry only what
+    # `chezmoi init` actually asks.
     profile        = "server"
     tier           = "standard"
     tierRank       = 1

@@ -44,7 +44,7 @@ pane_frames false
 // Setting copy_command here would intercept that and break it.
 copy_on_select true
 copy_clipboard "system"
-scrollback_editor "{{ .editor }}"
+scrollback_editor "{{ .identity.editor }}"
 scroll_buffer_size 20000
 mouse_mode true
 // Sessions are named after the host and reattached on login (decision #13);

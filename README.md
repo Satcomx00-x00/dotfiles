@@ -19,11 +19,14 @@ under 60 ms.
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/Satcomx00-x00/dotfiles/main/install.sh)"
 ```
 
-It asks for your name, email, editor, machine profile and tool tier, then does
-everything else. Unattended:
+Three questions — machine profile, tool tier, secrets backend — then it does
+everything else. Identity is not one of them: this is a personal repository, so
+the name, email and editor are repo data in
+[`home/.chezmoidata/identity.toml`](home/.chezmoidata/identity.toml).
+
+Unattended:
 
 ```sh
-DOTFILES_NAME="Your Name" DOTFILES_EMAIL=you@example.com \
 DOTFILES_PROFILE=server DOTFILES_TIER=standard \
 sh -c "$(curl -fsSL .../install.sh)" -- --yes
 ```

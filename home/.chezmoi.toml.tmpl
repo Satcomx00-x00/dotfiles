@@ -20,9 +20,10 @@
   file and the test fixtures cannot drift apart.
 */}}
 
-{{- $name   := promptStringOnce . "name"   "Full name" -}}
-{{- $email  := promptStringOnce . "email"  "Email" -}}
-{{- $editor := promptStringOnce . "editor" "Editor" "nvim" -}}
+{{/* Identity is NOT prompted. This is a personal repository, not a template,
+     so the answers never vary — they live in .chezmoidata/identity.toml and
+     reach every consumer from there. See the note in that file on why this
+     changes nothing about decision #30. */}}
 
 {{/* ── Machine profile ──────────────────────────────────────────────────────
      Auto-detected, still overridable. Drives nearly every conditional in the
@@ -58,9 +59,6 @@
 
 [data]
     # ── Answers ─────────────────────────────────────────────────────────────
-    name           = {{ $name           | quote }}
-    email          = {{ $email          | quote }}
-    editor         = {{ $editor         | quote }}
     profile        = {{ $profile        | quote }}
     tier           = {{ $tier           | quote }}
     tierRank       = {{ $tierRank }}

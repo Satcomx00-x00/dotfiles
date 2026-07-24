@@ -5,9 +5,12 @@
 #
 # Unattended (CI, container images, provisioning):
 #
-#   DOTFILES_NAME="Your Name" DOTFILES_EMAIL=you@example.com \
 #   DOTFILES_PROFILE=server DOTFILES_TIER=standard \
 #   sh -c "$(curl -fsSL .../install.sh)" -- --yes
+#
+# Identity is not asked for and cannot be overridden: this is a personal
+# repository, and the name, email and editor live in
+# home/.chezmoidata/identity.toml.
 #
 # It does four things and then gets out of the way: detect the platform, make
 # sure git and curl exist, install chezmoi, and hand off to
@@ -138,9 +141,6 @@ fi
 #
 # The flags key on the PROMPT TEXT, not the data key — see test/prompts.sh.
 set --
-if [ -n "${DOTFILES_NAME:-}" ]; then set -- "$@" --promptString "Full name=$DOTFILES_NAME"; fi
-if [ -n "${DOTFILES_EMAIL:-}" ]; then set -- "$@" --promptString "Email=$DOTFILES_EMAIL"; fi
-if [ -n "${DOTFILES_EDITOR:-}" ]; then set -- "$@" --promptString "Editor=$DOTFILES_EDITOR"; fi
 if [ -n "${DOTFILES_PROFILE:-}" ]; then set -- "$@" --promptChoice "Machine profile=$DOTFILES_PROFILE"; fi
 if [ -n "${DOTFILES_TIER:-}" ]; then set -- "$@" --promptChoice "Tool tier=$DOTFILES_TIER"; fi
 if [ -n "${DOTFILES_SECRETS:-}" ]; then set -- "$@" --promptChoice "Secrets backend=$DOTFILES_SECRETS"; fi

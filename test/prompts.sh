@@ -12,15 +12,15 @@
 # TEXT, not on the data key. `--promptString name=...` does nothing; the prompt
 # reads "Full name", so the flag must be `--promptString "Full name=..."`.
 #
+# Identity (name, email, editor) is deliberately absent: it is repo data in
+# .chezmoidata/identity.toml, not something init asks about.
+#
 # That makes the prompt wording in .chezmoi.toml.tmpl a machine-facing contract.
 # It is kept short and stable for exactly that reason, and test/render.sh fails
 # loudly (EOF on a prompt) the moment the two files disagree — so this cannot
 # rot silently into a broken unattended install.
 
 set -- \
-    --promptString "Full name=CI Tester" \
-    --promptString "Email=ci@example.com" \
-    --promptString "Editor=nvim" \
     --promptChoice "Machine profile=${DOTFILES_TEST_PROFILE:-server}" \
     --promptChoice "Tool tier=${DOTFILES_TEST_TIER:-standard}" \
     --promptChoice "Secrets backend=none" \

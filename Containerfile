@@ -17,8 +17,6 @@ FROM debian:12-slim
 # image sets the shell below), no Zellij autostart. See report.md §3.
 ARG PROFILE=container
 ARG TIER=standard
-ARG NAME="Container User"
-ARG EMAIL="container@localhost"
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
@@ -48,9 +46,6 @@ RUN sh -c "$(curl -fsLS get.chezmoi.io)" -- -b /root/.local/bin
 COPY . /src
 
 RUN chezmoi init --apply --source=/src --no-tty \
-        --promptString "Full name=${NAME}" \
-        --promptString "Email=${EMAIL}" \
-        --promptString "Editor=nvim" \
         --promptChoice "Machine profile=${PROFILE}" \
         --promptChoice "Tool tier=${TIER}" \
         --promptChoice "Secrets backend=none" \

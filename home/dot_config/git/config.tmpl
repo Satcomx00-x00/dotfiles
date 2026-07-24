@@ -11,8 +11,8 @@
 # agree on what a keyword looks like.
 
 [user]
-	name = {{ .name | quote }}
-	email = {{ .email | quote }}
+	name = {{ .identity.name | quote }}
+	email = {{ .identity.email | quote }}
 {{- if and .gpgSign .signingKey }}
 	signingkey = {{ .signingKey | quote }}
 {{- end }}
@@ -21,7 +21,7 @@
 	defaultBranch = main
 
 [core]
-	editor = {{ .editor | quote }}
+	editor = {{ .identity.editor | quote }}
 	pager = delta
 	excludesfile = ~/.config/git/ignore
 	# Avoid the "unsafe repository" refusal on shared or bind-mounted trees.

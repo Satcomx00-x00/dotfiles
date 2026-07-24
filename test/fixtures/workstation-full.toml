@@ -9,10 +9,9 @@
 # home/.chezmoi.toml.tmpl. test/render.sh fails loudly when they diverge.
 
 [data]
-    name           = "CI Tester"
-    email          = "ci@example.com"
-    editor         = "nvim"
-
+    # Identity is NOT here: it lives in home/.chezmoidata/identity.toml, which
+    # is repo data rather than a per-machine answer. Fixtures carry only what
+    # `chezmoi init` actually asks.
     profile        = "workstation"
     tier           = "full"
     tierRank       = 2
