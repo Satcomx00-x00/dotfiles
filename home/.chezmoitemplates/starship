@@ -13,171 +13,291 @@
   Call with:  {{ template "starship" (dict "glyphs" "nerd" "theme" .theme) }}
 */ -}}
 {{- $nerd := eq .glyphs "nerd" -}}
-{{- $p := .theme.palette -}}
-{{- $r := .theme.roles -}}
+{{- $q := .theme.prompt -}}
+{{- /* The segment divider, declared once. It is ALSO the rail at column 0 and
+       the one in front of the caret, so the gutter and the dividers are the
+       same mark — a prompt line is just another segment boundary. */ -}}
+{{- $bar := ternary "\u2502" "|" $nerd -}}
+{{- $s := printf "[%s ](rail)" $bar -}}
 # Generated from .chezmoidata/theme.toml — do not edit.
-# Layout: two lines with a right-side prompt (decision #44). Context on line
-# one, a clean input line below, and volatile information pushed right so it
-# never shifts the cursor. The input column is therefore constant, which is what
-# makes a long session scannable.
+#
+# ─── The idea ────────────────────────────────────────────────────────────────
+# Neo purple: a neon violet monochrome, NOT the Tokyo Night palette the rest of
+# this machine uses. Path, branch, versions, clock — every ambient fact is a
+# step on one high-chroma ramp (theme.prompt: shade → dim → core → bright),
+# placed on it by how often you need to read the thing.
+#
+# Note this prompt reads only [theme.prompt] and nothing else from theme.toml.
+# It is a deliberate second palette, not a drift: Tokyo Night's purples are
+# desaturated so they can sit behind syntax for hours, which is the opposite of
+# what a prompt is for. Retheming the editor does not retint the prompt.
+#
+# The monochrome exists to make ONE thing true: any hue in this prompt is
+# information. Red is root, cyan is another host, mint is a container, amber is
+# a live cluster, rose is something that needs a decision. You find them without
+# reading, because they are the only things here that are not violet.
+#
+# ─── The shape ───────────────────────────────────────────────────────────────
+#  │ satcom │ 󰢹 dev │ ~/dev/platform │  main !2 +1 │  v24 │ 󱃾 prod   │ 1.8s │ 14:22
+#  │ ❯ _
+#
+# Two lines with a right prompt (decision #44). Context on line one, a clean
+# input line below, volatile information pushed right so it never shifts the
+# cursor. The input column is constant, which is what makes a long session
+# scannable. The bar at column 0 is the same argument at a larger scale: in a
+# screen of command output, it is how you find where each prompt began — and it
+# turns rose when the last command failed, so a failure is visible from across
+# the room without reading an exit code.
+#
+# ─── Why the divider lives inside each module ────────────────────────────────
+# Every module's own `format` opens with the bar. That is not a style choice —
+# it is the only arrangement that cannot dangle. Starship has no "separator
+# between modules" concept and no way to ask whether the next module will
+# render, so a divider written between two modules in the top-level `format`
+# survives even when the module after it is empty, and you get `│ │ ~/src` on
+# every machine without a cluster or a Node project. Owned by the module, a
+# divider appears exactly when its segment does.
+#
+# The same reasoning removes the standalone bar from the top-level format:
+# whichever module renders first brings its own, so column 0 is always filled
+# without anything having to know which module that is.
+#
+# git_commit, git_state and git_status deliberately have NO bar. They always
+# trail git_branch, so they are part of its segment rather than segments of
+# their own — the repo is one fact, not four.
 
 "$schema" = 'https://starship.rs/config-schema.json'
 
 format = """
-$username$hostname$container$directory$git_branch$git_state$git_status\
+$username$hostname$container$directory\
+$git_branch$git_commit$git_state$git_status\
 $nodejs$python$golang$rust$terraform$kubernetes$aws\
+$jobs$shlvl\
 $line_break$character"""
 
 right_format = """$cmd_duration$status$time"""
 
 add_newline = true
-palette = 'tokyonight'
+palette = 'neopurple'
 command_timeout = 800
 
-[palettes.tokyonight]
-bg      = '{{ $p.bg }}'
-fg      = '{{ $p.fg }}'
-blue    = '{{ $p.blue }}'
-cyan    = '{{ $p.cyan }}'
-green   = '{{ $p.green }}'
-magenta = '{{ $p.magenta }}'
-orange  = '{{ $p.orange }}'
-purple  = '{{ $p.purple }}'
-red     = '{{ $p.red }}'
-yellow  = '{{ $p.yellow }}'
-muted   = '{{ $r.muted }}'
-accent  = '{{ $r.accent }}'
-urgent  = '{{ $r.urgent }}'
-ctx_ssh = '{{ $r.ctx_ssh }}'
-ctx_root = '{{ $r.ctx_root }}'
-ctx_k8s = '{{ $r.ctx_k8s }}'
+[palettes.neopurple]
+# The ramp. Everything ambient is one of these five.
+rail   = '{{ $q.shade }}'
+dim    = '{{ $q.dim }}'
+core   = '{{ $q.core }}'
+bright = '{{ $q.bright }}'
+peak   = '{{ $q.peak }}'
+# The exceptions. Hue is reserved for these, and they are the reason the rest
+# of the prompt gives up colour.
+alert  = '{{ $q.alert }}'
+root   = '{{ $q.root }}'
+ssh    = '{{ $q.ssh }}'
+dock   = '{{ $q.docker }}'
+k8s    = '{{ $q.k8s }}'
+cloud  = '{{ $q.cloud }}'
 
-# ─── Context markers ─────────────────────────────────────────────────────────
-# Root is red, SSH is a distinct colour, a container is marked. These three
-# facts are the ones that make you type the wrong command on the wrong machine.
+# ─── Context markers — the only hue on line one ──────────────────────────────
+# Root, another host, a container, a cluster. These four are the facts that get
+# you running the right command in the wrong place, so each gets its own neon
+# hue and none of them is violet.
+#
+# No "@" between user and host. hostname is ssh_only, so the separator would be
+# left dangling as `root@` every time you su on your own machine — and a
+# separator is exactly the decoration this prompt can do without. The two are
+# already different colours, which is the only distinction that was doing work.
 [username]
 show_always = false
-format = '[$user]($style)[@](muted)'
-style_user = 'accent'
-style_root = 'bold ctx_root'
+format = '{{ $s }}[$user]($style) '
+style_user = 'bright'
+style_root = 'bold root'
 
 [hostname]
 ssh_only = true
-format = '[$hostname]($style) '
-style = 'bold ctx_ssh'
-{{ if $nerd }}ssh_symbol = "\U000F08B9 "{{ else }}ssh_symbol = ""{{ end }}
+format = '{{ $s }}[$ssh_symbol$hostname]($style) '
+style = 'bold ssh'
+{{ if $nerd }}ssh_symbol = "\U000F08B9 "{{ else }}ssh_symbol = ''{{ end }}
 
 [container]
-{{ if $nerd }}format = "[\U000F0868 $name]($style) "{{ else }}format = '[($name)]($style) '{{ end }}
-style = 'bold cyan'
+{{ if $nerd }}format = "{{ $s }}[\U000F0868 $name]($style) "{{ else }}format = '{{ $s }}[($name)]($style) '{{ end }}
+style = 'bold dock'
 
-# ─── Directory ───────────────────────────────────────────────────────────────
+# ─── Directory — the anchor, and the one gradient ────────────────────────────
+# Not truncated to the repo. The path is split into three styles instead, so the
+# repo boundary is visible rather than implied: everything above the repo fades
+# into the rail, the repo root is the brightest thing in the prompt, and your
+# position inside it sits between them. You read the bright word first and the
+# rest only when you need it.
 [directory]
-truncation_length = 4
-truncate_to_repo = true
-style = 'bold blue'
+truncation_length = 3
+truncate_to_repo = false
+style = 'core'
+repo_root_style = 'bold bright'
+before_repo_root_style = 'rail'
+read_only_style = 'alert'
+home_symbol = '~'
 {{ if $nerd }}
 read_only = " \U000F033E"
-home_symbol = '~'
+truncation_symbol = '…/'
 {{ else }}
 read_only = ' [ro]'
-home_symbol = '~'
+truncation_symbol = '.../'
 {{ end }}
-format = '[$path]($style)[$read_only]($read_only_style) '
+format = '{{ $s }}[$path]($style)[$read_only]($read_only_style) '
+repo_root_format = '{{ $s }}[$before_root_path]($before_repo_root_style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) '
 
 # ─── Git ─────────────────────────────────────────────────────────────────────
 [git_branch]
 {{ if $nerd }}symbol = "\ue725 "{{ else }}symbol = 'git:'{{ end }}
-style = 'purple'
-format = '[$symbol$branch]($style) '
+style = 'core'
+format = '{{ $s }}[$symbol$branch]($style) '
+truncation_length = 24
+{{ if $nerd }}truncation_symbol = '…'{{ else }}truncation_symbol = '..'{{ end }}
 
-[git_status]
-style = 'yellow'
-format = '([$all_status$ahead_behind]($style) )'
-conflicted = '='
-ahead = '⇡${count}'
-behind = '⇣${count}'
-diverged = '⇕⇡${ahead_count}⇣${behind_count}'
-untracked = '?${count}'
-stashed = '*${count}'
-modified = '!${count}'
-staged = '+${count}'
-renamed = '»${count}'
-deleted = '✘${count}'
+# Detached HEAD is a state you can lose work in, and git_branch renders nothing
+# for it. Shown in the failure colour for that reason, not as decoration.
+[git_commit]
+only_detached = true
+commit_hash_length = 7
+style = 'alert'
+format = '[\($hash$tag\)]($style) '
 
 [git_state]
-style = 'bold red'
+style = 'bold alert'
 format = '\([$state( $progress_current/$progress_total)]($style)\) '
 
-# ─── Language versions — only inside a project of that language ──────────────
+# Counts stay on the ramp; the two states that need a decision from you —
+# a conflict, and a branch that has diverged — are pulled off it.
+[git_status]
+style = 'dim'
+format = '([$all_status$ahead_behind]($style) )'
+{{ if $nerd }}
+conflicted = '[=${count}](bold alert)'
+diverged   = '[⇕${ahead_count}/${behind_count}](bold alert)'
+ahead      = '[⇡${count}](core)'
+behind     = '[⇣${count}](core)'
+untracked  = '?${count}'
+stashed    = '*${count}'
+modified   = '!${count}'
+staged     = '+${count}'
+renamed    = '»${count}'
+deleted    = '✘${count}'
+{{ else }}
+conflicted = '[=${count}](bold alert)'
+diverged   = '[^${ahead_count}v${behind_count}](bold alert)'
+ahead      = '[^${count}](core)'
+behind     = '[v${count}](core)'
+untracked  = '?${count}'
+stashed    = '*${count}'
+modified   = '!${count}'
+staged     = '+${count}'
+renamed    = '>${count}'
+deleted    = 'x${count}'
+{{ end }}
+
+# ─── Language versions — ambient, and only inside a project of that language ─
+# All one colour on purpose. Which toolchain you are on matters about once a
+# day; it does not deserve to compete with the path for your attention.
 [nodejs]
 {{ if $nerd }}symbol = "\ue718 "{{ else }}symbol = 'node '{{ end }}
-style = 'green'
-format = '[$symbol($version)]($style) '
+style = 'dim'
+format = '{{ $s }}[$symbol($version)]($style) '
 detect_files = ['package.json', '.nvmrc', 'bun.lockb', 'bun.lock']
 
 [python]
 {{ if $nerd }}symbol = "\ue235 "{{ else }}symbol = 'py '{{ end }}
-style = 'yellow'
-format = '[$symbol($version)( \($virtualenv\))]($style) '
+style = 'dim'
+format = '{{ $s }}[$symbol($version)( \($virtualenv\))]($style) '
 
 [golang]
 {{ if $nerd }}symbol = "\ue627 "{{ else }}symbol = 'go '{{ end }}
-style = 'cyan'
-format = '[$symbol($version)]($style) '
+style = 'dim'
+format = '{{ $s }}[$symbol($version)]($style) '
 
 [rust]
 {{ if $nerd }}symbol = "\ue7a8 "{{ else }}symbol = 'rs '{{ end }}
-style = 'orange'
-format = '[$symbol($version)]($style) '
+style = 'dim'
+format = '{{ $s }}[$symbol($version)]($style) '
 
 [terraform]
 {{ if $nerd }}symbol = "\U000F1062 "{{ else }}symbol = 'tf '{{ end }}
-style = 'purple'
-format = '[$symbol$workspace]($style) '
+style = 'dim'
+format = '{{ $s }}[$symbol$workspace]($style) '
 
 # ─── Kubernetes — the segment that stops you running against prod ────────────
 # Always shown when a kubeconfig is active, never hidden behind a detect rule.
 [kubernetes]
 disabled = false
 {{ if $nerd }}symbol = "\U000F10FE "{{ else }}symbol = 'k8s '{{ end }}
-style = 'bold ctx_k8s'
-format = '[$symbol$context( \($namespace\))]($style) '
+style = 'bold k8s'
+format = '{{ $s }}[$symbol$context( \($namespace\))]($style) '
 
 [aws]
 {{ if $nerd }}symbol = "\ue7ad "{{ else }}symbol = 'aws '{{ end }}
-style = 'orange'
-format = '[$symbol($profile)( \($region\))]($style) '
+style = 'bold cloud'
+format = '{{ $s }}[$symbol($profile)( \($region\))]($style) '
+
+# ─── Local shell state — cheap to compute, easy to forget you are in ─────────
+# Neither of these forks anything. Both answer a question you would otherwise
+# answer by running a command: what did I background, and how deep am I.
+[jobs]
+symbol_threshold = 1
+number_threshold = 1
+style = 'core'
+{{ if $nerd }}symbol = "\uf0e7 "{{ else }}symbol = '&'{{ end }}
+format = '{{ $s }}[$symbol$number]($style) '
+
+[shlvl]
+disabled = false
+threshold = 3
+repeat = false
+style = 'dim'
+{{ if $nerd }}symbol = "\uf120 "{{ else }}symbol = 'sh'{{ end }}
+format = '{{ $s }}[$symbol$shlvl]($style) '
 
 # ─── Right side: volatile information, so the cursor column never moves ──────
 [cmd_duration]
 min_time = 2000
-style = 'muted'
-{{ if $nerd }}format = "[\U000F051F $duration]($style) "{{ else }}format = '[took $duration]($style) '{{ end }}
+show_milliseconds = false
+style = 'dim'
+{{ if $nerd }}format = "{{ $s }}[\U000F051F $duration]($style) "{{ else }}format = '{{ $s }}[took $duration]($style) '{{ end }}
 
+# recognize_signal_code turns 130 into SIGINT — the number is only useful if
+# you have the table memorised, and the name is useful to everyone.
 [status]
 disabled = false
-style = 'bold red'
-{{ if $nerd }}format = "[\uf00d $status]($style) "{{ else }}format = '[x$status]($style) '{{ end }}
+style = 'bold alert'
+recognize_signal_code = true
 map_symbol = false
 pipestatus = true
+{{ if $nerd }}symbol = "\uf00d "{{ else }}symbol = 'x '{{ end }}
+format = '{{ $s }}[$symbol$common_meaning$signal_name$maybe_int]($style) '
 
 [time]
 disabled = false
-style = 'muted'
+style = 'dim'
 time_format = '%H:%M'
-format = '[$time]($style)'
+format = '{{ $s }}[$time]($style)'
 
 # ─── Line two: the input line, one character, always the same column ─────────
+# The rail is part of the character, so it changes colour with it: the gutter
+# itself goes rose when the last command failed, and peak in vim normal mode.
+# One glyph of width, no extra module, and the state is unmissable.
 [character]
 {{ if $nerd }}
-success_symbol = '[❯](bold green)'
-error_symbol = '[❯](bold red)'
-vimcmd_symbol = '[❮](bold green)'
+success_symbol = '[{{ $bar }}](rail)[❯](bold core)'
+error_symbol   = '[{{ $bar }}](alert)[❯](bold alert)'
+vimcmd_symbol  = '[{{ $bar }}](peak)[❮](bold peak)'
+vimcmd_replace_one_symbol = '[{{ $bar }}](peak)[❮](bold k8s)'
+vimcmd_replace_symbol = '[{{ $bar }}](peak)[❮](bold k8s)'
+vimcmd_visual_symbol  = '[{{ $bar }}](peak)[❮](bold cloud)'
 {{ else }}
-success_symbol = '[>](bold green)'
-error_symbol = '[>](bold red)'
-vimcmd_symbol = '[<](bold green)'
+success_symbol = '[{{ $bar }}](rail)[>](bold core)'
+error_symbol   = '[{{ $bar }}](alert)[>](bold alert)'
+vimcmd_symbol  = '[{{ $bar }}](peak)[<](bold peak)'
+vimcmd_replace_one_symbol = '[{{ $bar }}](peak)[<](bold k8s)'
+vimcmd_replace_symbol = '[{{ $bar }}](peak)[<](bold k8s)'
+vimcmd_visual_symbol  = '[{{ $bar }}](peak)[<](bold cloud)'
 {{ end }}
 
 # Modules deliberately off: they cost a subprocess each and say nothing this

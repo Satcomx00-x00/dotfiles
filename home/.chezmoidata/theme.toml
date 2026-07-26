@@ -88,11 +88,43 @@
     accent     = "#7aa2f7"
     muted      = "#565f89"
     urgent     = "#ff007c"
-    # Context markers used by the prompt (§8.6) and Zellij status bar.
-    ctx_ssh    = "#bb9af7"
-    ctx_root   = "#f7768e"
-    ctx_docker = "#7dcfff"
-    ctx_k8s    = "#ff9e64"
+
+# ─── Prompt: "neo purple" ────────────────────────────────────────────────────
+# The prompt does NOT use the Tokyo Night palette above, and that is the point.
+# Tokyo Night's purples (#9d7cd8, #bb9af7) are desaturated pastels designed to
+# sit quietly behind syntax for hours; a prompt has the opposite job. This is a
+# neon violet ramp on the same near-black background — high chroma, wide
+# lightness spread — so the prompt reads as its own object rather than as more
+# editor chrome that happens to be in the terminal.
+#
+# It is a self-contained palette: the prompt is the only consumer, so it owns
+# every colour it needs, here, rather than borrowing half of them from
+# [theme.roles] and drifting from that palette's intent at the next retheme.
+#
+# ── The ramp: one hue, five steps ────────────────────────────────────────────
+# Everything ambient — path, branch, versions, jobs, clock — is one of these.
+# Position encodes how often you need the thing, and the contrast ratios below
+# (against bg #1a1b26) are the actual design: each step is ~1.5x the last, so
+# five levels stay separable instead of collapsing into "some purples".
+[theme.prompt]
+    shade  = "#5a189a"  # 1.7:1  rail and separators — structure, never read
+    dim    = "#7b2cbf"  # 2.4:1  ambient — versions, timings, the clock
+    core   = "#a855f7"  # 4.3:1  structure you do read — branch, the caret
+    bright = "#c77dff"  # 6.4:1  the anchor — repo root, the path you are in
+    peak   = "#e0aaff"  # 9.2:1  a mode change (vim normal)
+
+    # ── The exceptions: the only hue in the prompt ───────────────────────────
+    # Because everything else is one violet, ANY other hue is information, and
+    # the eye finds it without reading. Kept at neon saturation to match the
+    # ramp — a pastel warning next to a neon path reads as a rendering bug.
+    # Each answers a different version of "you are not where you think you
+    # are", so they must stay separable from each other, not just from purple.
+    alert  = "#ff2e88"  # rose   — it failed, or it needs a decision from you
+    root   = "#ff4040"  # red    — you are root
+    ssh    = "#00e5ff"  # cyan   — you are on another host
+    docker = "#00ffa3"  # mint   — you are inside a container
+    k8s    = "#ff9f1c"  # amber  — you are pointed at a cluster
+    cloud  = "#ffd60a"  # yellow — you have a cloud profile assumed
 
 # ─── UI chrome ───────────────────────────────────────────────────────────────
 [theme.ui]

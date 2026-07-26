@@ -124,6 +124,25 @@ if [ -n "$glyph_hits" ]; then
     fail 'empty glyph assignment (a Nerd Font character was probably lost)'
 fi
 
+# The other half of the same problem, in the other direction: the ASCII prompt
+# is the fallback for a bare TTY with no Nerd Font, so a single non-ASCII
+# character that leaked past a {{ if $nerd }} defeats the entire point of having
+# it. Both variants come from one partial, which is what makes this easy to do
+# by accident — a symbol added outside the conditional lands in both.
+# Comments are exempt: they are never rendered to the screen.
+for f in "$BUILD"/*/dot_config/starship-ascii.toml; do
+    [ -s "$f" ] || continue
+    # LC_ALL=C so every byte above 0x7f is simply "not printable" — this needs
+    # no grep -P, which is GNU-only and absent on the BSD and busybox userlands
+    # this repo is also expected to lint on.
+    ascii_hits=$(LC_ALL=C grep -n '[^[:print:][:space:]]' "$f" |
+        grep -vE '^[0-9]+:[[:space:]]*#' || true)
+    if [ -n "$ascii_hits" ]; then
+        printf '%s\n' "$ascii_hits" | sed 's/^/   FAIL  /'
+        fail "non-ASCII in the ASCII prompt fallback: ${f#"$BUILD"/}"
+    fi
+done
+
 # ─── 7. tools.toml pin rule ──────────────────────────────────────────────────
 # Decision #20 says everything floats except two tools. A pinned version with no
 # stated reason is how a repo silently accumulates frozen dependencies.

@@ -169,7 +169,14 @@ _dotfiles_not_found() {
     printf '%s: command not found\n' "$_cmd" >&2
 
     _fix=''
-    if command -v mise >/dev/null 2>&1 && mise registry 2>/dev/null | grep -q "^$_cmd[[:space:]]"; then
+    # ${_cmd} braced, and it must stay that way: zsh reads `$_cmd[...]` as an
+    # array subscript, not as a variable followed by a bracket expression, so
+    # the bare form dies with "bad output format specification" — a FATAL
+    # expansion error that aborts the whole function. This handler therefore
+    # printed nothing but that error on zsh, our primary shell, while working
+    # perfectly on bash. Valid POSIX that zsh reinterprets is the sharp edge of
+    # sharing this file between the two.
+    if command -v mise >/dev/null 2>&1 && mise registry 2>/dev/null | grep -q "^${_cmd}[[:space:]]"; then
         _fix="mise use -g $_cmd@latest"
     elif command -v apt-get >/dev/null 2>&1; then
         _fix="sudo apt-get install -y $_cmd"

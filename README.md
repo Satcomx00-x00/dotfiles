@@ -83,7 +83,7 @@ independent, so a small VPS can be a `server` on `minimal`.
 | Area | Choice |
 | --- | --- |
 | Shell | zsh, emacs keybindings, full bash parity |
-| Prompt | Starship — two lines, right-side prompt, transient |
+| Prompt | Starship — two lines, transient; a neon violet monochrome, so any hue in it is information |
 | Theme | Tokyo Night, defined once and templated into 12 configs |
 | Editor | Neovim on lazy.nvim — snacks.nvim, blink.cmp, lualine |
 | Multiplexer | Zellij with zjstatus, unified `Ctrl-hjkl` across editor and panes |
