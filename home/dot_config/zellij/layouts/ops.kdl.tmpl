@@ -1,5 +1,10 @@
-{{- /* `zellij --layout ops` — the shape of an incident: shell, logs, resources. */ -}}
+{{- /* `zellij --layout ops` — the shape of an incident: shell, logs, resources.
+     Status bar shared from .chezmoitemplates/zjstatus, like every layout. */ -}}
 layout {
+    default_tab_template {
+{{ template "zjstatus" . }}
+        children
+    }
     tab name="ops" focus=true {
         pane split_direction="horizontal" {
             pane size="60%" split_direction="vertical" {

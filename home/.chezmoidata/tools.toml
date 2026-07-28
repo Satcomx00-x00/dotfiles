@@ -210,7 +210,9 @@
 [[tools.list]]
     name    = "zellij"
     backend = "aqua:zellij-org/zellij"
-    version = "0.43.1"
+    # 0.44 is the floor for `zellij action switch-session`, which the `zs`
+    # sessionizer uses to move a client between sessions from inside Zellij.
+    version = "0.44.3"
     rank    = 1
     group   = "multiplexer"
     role    = "terminal multiplexer"

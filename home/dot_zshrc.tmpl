@@ -22,8 +22,10 @@ esac
 {{- if .autoAttach }}
 
 # ─── 2. Zellij auto-attach (decision #13) ────────────────────────────────────
-# Attach to a session named after this host, creating it if absent, so a
-# dropped SSH connection costs nothing.
+# Reattach to the LAST session you were in — written here and by the `zs`
+# sessionizer (pickers.sh) — falling back to a session named after this host.
+# `attach --create` resurrects a dead session or creates a fresh one, so a
+# dropped SSH connection or a reboot costs nothing.
 #
 # Every guard here matters. Without them this line breaks scp, rsync, remote
 # `ssh host command`, VS Code's server, and any nested shell — all of which are
@@ -34,7 +36,20 @@ if [[ -z "$ZELLIJ" ]] &&
     [[ -z "$VSCODE_INJECTION" ]] &&
     [[ "$TERM" != "dumb" ]] &&
     command -v zellij >/dev/null 2>&1; then
-    ZELLIJ_AUTO_EXIT=true exec zellij attach --create "${HOST%%.*}"
+    # The forks below run only on this path, where an exec follows anyway.
+    _zj_state="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
+    _zj_session="${HOST%%.*}"
+    if [[ -r "$_zj_state/last-session" ]]; then
+        _zj_last="$(<"$_zj_state/last-session")"
+        # Only honour the state file if that session still exists (live or
+        # serialised); otherwise the host session is the home base.
+        if [[ -n "$_zj_last" ]] && zellij list-sessions -s 2>/dev/null | grep -qx -- "$_zj_last"; then
+            _zj_session="$_zj_last"
+        fi
+    fi
+    mkdir -p "$_zj_state" 2>/dev/null &&
+        printf '%s\n' "$_zj_session" >| "$_zj_state/last-session" 2>/dev/null
+    ZELLIJ_AUTO_EXIT=true exec zellij attach --create "$_zj_session"
 fi
 {{- end }}
 
@@ -127,6 +142,18 @@ unset _f _dotfiles_shell_dir
 # Completion for the bookmark functions defined in functions.sh.
 _dotfiles_marks_complete() { compadd -- ${(f)"$(_dotfiles_mark_names)"} }
 compdef _dotfiles_marks_complete jump unmark
+
+# Ctrl-f runs the `zs` sessionizer (pickers.sh). forward-char is sacrificed
+# knowingly — the arrow keys cover it. push-input stashes any half-typed
+# command and restores it at the next prompt.
+_dotfiles_zs_widget() {
+    (( $+functions[zs] )) || return 0
+    zle push-input
+    BUFFER='zs'
+    zle accept-line
+}
+zle -N _dotfiles_zs_widget
+bindkey '^F' _dotfiles_zs_widget
 
 # ─── 8. Plugins, all deferred (decision #2) ──────────────────────────────────
 # zsh-defer queues a command to run after the first prompt is drawn, so the

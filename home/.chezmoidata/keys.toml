@@ -40,6 +40,26 @@
     role  = "Lock mode — engaged automatically while Neovim has focus"
     stock = true
 
+[[keys.zellij]]
+    key   = "Alt n"
+    role  = "New pane, without entering pane mode"
+    stock = true
+
+[[keys.zellij]]
+    key   = "Alt f"
+    role  = "Toggle floating panes"
+    stock = true
+
+[[keys.zellij]]
+    key   = "Alt h/j/k/l · Alt arrows"
+    role  = "Move focus between panes (and tabs at the edges)"
+    stock = true
+
+[[keys.zellij]]
+    key   = "Alt +/-"
+    role  = "Grow / shrink the focused pane"
+    stock = true
+
 # ── Added by this repo ───────────────────────────────────────────────────────
 [[keys.zellij]]
     key    = "Ctrl h/j/k/l"
@@ -51,10 +71,24 @@
     role   = "Fuzzy session and project switcher"
     plugin = "room"
 
+[[keys.zellij]]
+    key    = "Alt x"
+    role   = "Close the focused pane, without entering pane mode"
+    plugin = ""
+
+[[keys.zellij]]
+    key    = "Alt m"
+    role   = "Toggle fullscreen on the focused pane"
+    plugin = ""
+
 # ═══ Shell — the bindings worth knowing about ════════════════════════════════
 # Emacs mode (decision #31): Ctrl-a/e/w/u/k behave identically here, on a stock
 # server, in bash, and in every REPL, so they are not listed. These are the ones
 # this repo adds or rebinds.
+
+[[keys.shell]]
+    key  = "Ctrl-f"
+    role = "Zellij sessionizer — pick or create a per-project session (`zs`)"
 
 [[keys.shell]]
     key  = "Ctrl-r"

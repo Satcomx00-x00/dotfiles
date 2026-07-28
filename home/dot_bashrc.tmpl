@@ -87,3 +87,9 @@ _dotfiles_marks_complete() {
     mapfile -t COMPREPLY < <(compgen -W "$(_dotfiles_mark_names)" -- "$cur")
 }
 complete -F _dotfiles_marks_complete jump unmark
+
+# Ctrl-f runs the `zs` sessionizer, mirroring the zsh widget. Bound only when
+# pickers.sh actually defined it (it bails without fzf).
+if command -v zs > /dev/null 2>&1; then
+    bind -x '"\C-f": zs'
+fi

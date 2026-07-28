@@ -5,13 +5,19 @@
 //
 // Decision #42: the DEFAULT modal keybinding scheme, unmodified. Every Zellij
 // doc, issue and Stack Overflow answer then applies directly to this setup, and
-// the zjstatus bar shows the active mode at all times. Only three things are
-// added, all of them absent upstream:
+// the zjstatus bar shows the active mode — with its key hints — at all times.
+// Only these are added, all of them absent upstream:
 //
 //   Ctrl-h/j/k/l   unified pane/split navigation across the Neovim boundary
 //   Ctrl-o w       the `room` session and project switcher
+//   Alt-x, Alt-m   close / fullscreen the focused pane without entering pane
+//                  mode — completing the stock Alt layer (Alt-n new, Alt-f
+//                  floating, Alt-h/j/k/l focus are upstream defaults)
 //   autolock       locks Zellij while Neovim has focus, so vim keys are never
 //                  stolen mid-edit
+//
+// The `zs` sessionizer (pickers.sh, Ctrl-f in the shell) creates per-project
+// sessions with the dev layout; it is shell-side, so nothing here binds it.
 //
 // Plugin paths are absolute because Zellij's `file:` scheme does not expand ~.
 
@@ -103,6 +109,12 @@ keybinds {
                 payload "right";
             };
         }
+
+        // The stock Alt layer covers new pane (Alt-n), floating (Alt-f) and
+        // focus (Alt-h/j/k/l, Alt-arrows). These two complete it, so the four
+        // everyday pane actions never require entering pane mode.
+        bind "Alt x" { CloseFocus; }
+        bind "Alt m" { ToggleFocusFullscreen; }
     }
 
     session {

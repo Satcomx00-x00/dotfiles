@@ -1,0 +1,53 @@
+{{- /* The zjstatus status-bar pane: one line — mode badge with contextual key
+     hints, tabs, host, session, clock. Every layout includes this via
+     `template "zjstatus"`, so the bar cannot drift between layouts and a
+     session started from the sessionizer looks identical to the default one.
+
+     The hints after each badge are the discoverability layer for decision #42:
+     the stock modal scheme stays, and the bar tells you what the current mode
+     answers to instead of making you memorise it. */ -}}
+{{- $p := .theme.palette -}}
+{{- $u := .theme.ui -}}
+{{- $hint := printf "#[bg=%s,fg=%s]" $u.statusline_bg $p.comment -}}
+        pane size=1 borderless=true {
+            plugin location="file:{{ .chezmoi.homeDir }}/.local/share/zellij/plugins/zjstatus.wasm" {
+                format_left   "{mode}#[bg={{ $u.statusline_bg }}] {tabs}"
+                format_right  "#[bg={{ $u.statusline_bg }},fg={{ $p.comment }}]{command_host}#[bg={{ $u.statusline_bg }},fg={{ $p.blue7 }}] | #[bg={{ $u.statusline_bg }},fg={{ $p.blue }}]{session} #[bg={{ $u.statusline_bg }},fg={{ $p.blue7 }}]| #[bg={{ $u.statusline_bg }},fg={{ $p.fg_dark }}]{datetime}"
+                format_space  "#[bg={{ $u.statusline_bg }}]"
+                format_hide_on_overlength "true"
+                format_precedence "lrs"
+
+                border_enabled  "false"
+                hide_frame_for_single_pane "true"
+
+                mode_normal        "#[bg={{ $p.green }},fg={{ $p.bg }},bold] NORMAL {{ $hint }} ^p pane · ^t tab · ^n resize · ^o session · ^s scroll · ^g lock "
+                mode_locked        "#[bg={{ $p.comment }},fg={{ $p.bg }},bold] LOCKED {{ $hint }} ^g unlock "
+                mode_pane          "#[bg={{ $p.blue }},fg={{ $p.bg }},bold] PANE {{ $hint }} n new · d/r split · x close · f full · w float · c rename "
+                mode_tab           "#[bg={{ $p.cyan }},fg={{ $p.bg }},bold] TAB {{ $hint }} n new · x close · r rename · h/l switch · 1-9 jump · b break · s sync "
+                mode_scroll        "#[bg={{ $p.yellow }},fg={{ $p.bg }},bold] SCROLL {{ $hint }} j/k line · d/u half-page · s search · e edit "
+                mode_enter_search  "#[bg={{ $p.yellow }},fg={{ $p.bg }},bold] SEARCH {{ $hint }} type, then enter "
+                mode_search        "#[bg={{ $p.yellow }},fg={{ $p.bg }},bold] SEARCH {{ $hint }} n/p next/prev · c case · w wrap "
+                mode_resize        "#[bg={{ $p.magenta }},fg={{ $p.bg }},bold] RESIZE {{ $hint }} h/j/k/l grow · H/J/K/L shrink · +/- all "
+                mode_move          "#[bg={{ $p.magenta }},fg={{ $p.bg }},bold] MOVE {{ $hint }} h/j/k/l or tab move pane "
+                mode_session       "#[bg={{ $p.purple }},fg={{ $p.bg }},bold] SESSION {{ $hint }} d detach · w switcher · p plugins · c config "
+                mode_tmux          "#[bg={{ $p.orange }},fg={{ $p.bg }},bold] TMUX "
+                mode_rename_tab    "#[bg={{ $p.cyan }},fg={{ $p.bg }},bold] RENAME {{ $hint }} enter apply · esc cancel "
+                mode_rename_pane   "#[bg={{ $p.blue }},fg={{ $p.bg }},bold] RENAME {{ $hint }} enter apply · esc cancel "
+                mode_default_to_mode "normal"
+
+                tab_normal         "#[bg={{ $u.statusline_bg }},fg={{ $p.comment }}] {index}·{name} "
+                tab_active         "#[bg={{ $p.bg_highlight }},fg={{ $p.blue }},bold] {index}·{name} "
+                tab_sync_indicator " ⟳"
+                tab_fullscreen_indicator " □"
+                tab_floating_indicator " ⬚"
+
+                command_host_command      "hostname -s"
+                command_host_format       " {stdout}"
+                command_host_interval     "0"
+                command_host_rendermode   "static"
+
+                datetime          "#[fg={{ $p.fg_dark }}]{format} "
+                datetime_format   "%H:%M"
+                datetime_timezone "Local"
+            }
+        }

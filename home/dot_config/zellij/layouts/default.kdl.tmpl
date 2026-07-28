@@ -1,56 +1,12 @@
-{{- $p := .theme.palette -}}
-{{- $u := .theme.ui -}}
-{{- $home := .chezmoi.homeDir -}}
-// Default layout: one pane, one status bar.
-//
-// zjstatus replaces Zellij's stock two-line bar with a single configurable
-// line (decision #12). The mode indicator matters here: decision #42 keeps the
-// default modal keybindings, so knowing which mode you are in is not optional.
+{{- /* Default layout: one pane, one status bar.
 
+     The bar itself lives in .chezmoitemplates/zjstatus (decision #12) and is
+     shared by every layout. The mode indicator matters here: decision #42
+     keeps the default modal keybindings, so knowing which mode you are in —
+     and what it answers to — is not optional. */ -}}
 layout {
     default_tab_template {
-        pane size=1 borderless=true {
-            plugin location="file:{{ $home }}/.local/share/zellij/plugins/zjstatus.wasm" {
-                format_left   "{mode}#[bg={{ $u.statusline_bg }}] {tabs}"
-                format_right  "#[bg={{ $u.statusline_bg }},fg={{ $p.comment }}]{command_host}#[bg={{ $u.statusline_bg }},fg={{ $p.blue7 }}] | #[bg={{ $u.statusline_bg }},fg={{ $p.blue }}]{session} #[bg={{ $u.statusline_bg }},fg={{ $p.blue7 }}]| #[bg={{ $u.statusline_bg }},fg={{ $p.fg_dark }}]{datetime}"
-                format_space  "#[bg={{ $u.statusline_bg }}]"
-                format_hide_on_overlength "true"
-                format_precedence "lrs"
-
-                border_enabled  "false"
-                hide_frame_for_single_pane "true"
-
-                mode_normal        "#[bg={{ $p.green }},fg={{ $p.bg }},bold] NORMAL "
-                mode_locked        "#[bg={{ $p.comment }},fg={{ $p.bg }},bold] LOCKED "
-                mode_pane          "#[bg={{ $p.blue }},fg={{ $p.bg }},bold] PANE "
-                mode_tab           "#[bg={{ $p.cyan }},fg={{ $p.bg }},bold] TAB "
-                mode_scroll        "#[bg={{ $p.yellow }},fg={{ $p.bg }},bold] SCROLL "
-                mode_enter_search  "#[bg={{ $p.yellow }},fg={{ $p.bg }},bold] SEARCH "
-                mode_search        "#[bg={{ $p.yellow }},fg={{ $p.bg }},bold] SEARCH "
-                mode_resize        "#[bg={{ $p.magenta }},fg={{ $p.bg }},bold] RESIZE "
-                mode_move          "#[bg={{ $p.magenta }},fg={{ $p.bg }},bold] MOVE "
-                mode_session       "#[bg={{ $p.purple }},fg={{ $p.bg }},bold] SESSION "
-                mode_tmux          "#[bg={{ $p.orange }},fg={{ $p.bg }},bold] TMUX "
-                mode_rename_tab    "#[bg={{ $p.cyan }},fg={{ $p.bg }},bold] RENAME "
-                mode_rename_pane   "#[bg={{ $p.blue }},fg={{ $p.bg }},bold] RENAME "
-                mode_default_to_mode "normal"
-
-                tab_normal         "#[bg={{ $u.statusline_bg }},fg={{ $p.comment }}] {index}·{name} "
-                tab_active         "#[bg={{ $p.bg_highlight }},fg={{ $p.blue }},bold] {index}·{name} "
-                tab_sync_indicator " ⟳"
-                tab_fullscreen_indicator " □"
-                tab_floating_indicator " ⬚"
-
-                command_host_command      "hostname -s"
-                command_host_format       " {stdout}"
-                command_host_interval     "0"
-                command_host_rendermode   "static"
-
-                datetime          "#[fg={{ $p.fg_dark }}]{format} "
-                datetime_format   "%H:%M"
-                datetime_timezone "Local"
-            }
-        }
+{{ template "zjstatus" . }}
         children
     }
 }

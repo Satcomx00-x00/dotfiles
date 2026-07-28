@@ -192,6 +192,10 @@ if command -v chezmoi >/dev/null 2>&1; then
     # @help cd to the dotfiles source directory
     alias cmcd='cd "$(chezmoi source-path)"'
 fi
+if command -v dotfiles >/dev/null 2>&1; then
+    # @help Zellij keybinding cheatsheet — keys.toml via the help index
+    alias zk='dotfiles help zellij'
+fi
 
 # @group misc — quality of life
 # @help replace this shell with a fresh login shell

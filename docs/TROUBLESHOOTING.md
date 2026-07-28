@@ -79,6 +79,13 @@ VS Code, and for non-interactive invocations — so `scp`, `rsync` and
 `ssh host command` are unaffected. If it fires when it should not, that is a bug
 in the guard list in `~/.zshrc`.
 
+## Login attached to the wrong Zellij session
+
+Auto-attach reattaches the last session you were in, remembered in
+`~/.local/state/dotfiles/last-session` (written by login and by the `zs`
+sessionizer). Delete that file — or pick another session with `zs` / `Ctrl-f` —
+and login falls back to the session named after the host.
+
 ## Zellij will not start after an upgrade
 
 This is the reason it is pinned (decision #20). If you bumped it and the KDL is

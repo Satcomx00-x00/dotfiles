@@ -21,6 +21,8 @@
 .config/btop/themes/tokyonight.theme
 .config/zellij/config.kdl
 .config/zellij/layouts/default.kdl
+.config/zellij/layouts/dev.kdl
+.config/zellij/layouts/ops.kdl
 .config/k9s/skins/tokyonight.yaml
 .config/ghostty/config
 .config/alacritty/alacritty.toml

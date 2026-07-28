@@ -156,3 +156,65 @@ fssh() {
     [ -n "$_h" ] && ssh "$_h"
     unset _hosts _h
 }
+
+# @group zellij — per-project sessions (decision #13, refactored)
+
+# @help pick or create a per-project Zellij session — bound to Ctrl-f
+zs() {
+    command -v zellij >/dev/null 2>&1 || { echo 'zs: zellij not installed' >&2; return 1; }
+    # Candidates: existing sessions (live and resurrectable) first, then
+    # project directories from zoxide's frecency ranking and ~/dev. The awk
+    # pass dedups by would-be session name, so a directory whose session
+    # already exists shows up once, as the session.
+    _zs_sel=$(
+        {
+            zellij list-sessions -s 2>/dev/null
+            if command -v zoxide >/dev/null 2>&1; then
+                zoxide query -l 2>/dev/null
+            fi
+            if command -v fd >/dev/null 2>&1; then
+                fd --type d --min-depth 1 --max-depth 2 . "$HOME/dev" 2>/dev/null
+            else
+                find "$HOME/dev" -mindepth 1 -maxdepth 2 -type d -not -name '.*' 2>/dev/null
+            fi
+        } | awk '{ n = $0; sub(".*/", "", n) } n != "" && !seen[n]++' \
+            | fzf --header='zellij session — name or project directory'
+    ) || { unset _zs_sel; return 0; }
+    [ -n "$_zs_sel" ] || { unset _zs_sel; return 0; }
+
+    case $_zs_sel in
+        */*) _zs_dir=$_zs_sel ;;
+        *) _zs_dir='' ;;
+    esac
+    # Session names come from the directory basename; zellij rejects some
+    # punctuation, so anything outside [alnum]_- is folded to a dash.
+    _zs_name=$(printf '%s' "${_zs_sel##*/}" | tr -c '[:alnum:]_-' '-')
+
+    # Remember the choice so the next login's auto-attach lands here (~/.zshrc).
+    _zs_state="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
+    mkdir -p "$_zs_state" 2>/dev/null \
+        && printf '%s\n' "$_zs_name" > "$_zs_state/last-session" 2>/dev/null
+
+    if zellij list-sessions -s 2>/dev/null | grep -qx -- "$_zs_name"; then
+        _zs_new=''
+    else
+        _zs_new=1
+    fi
+
+    if [ -n "$ZELLIJ" ]; then
+        # Inside a session a client cannot attach; create the target detached
+        # if needed, then move this client over to it.
+        if [ -n "$_zs_new" ]; then
+            (cd "${_zs_dir:-$HOME}" \
+                && zellij --new-session-with-layout dev attach --create-background "$_zs_name")
+        fi
+        zellij action switch-session "$_zs_name"
+    elif [ -n "$_zs_new" ]; then
+        (cd "${_zs_dir:-$HOME}" \
+            && zellij --new-session-with-layout dev attach --create "$_zs_name")
+    else
+        # attach resurrects a dead session as well as joining a live one.
+        zellij attach "$_zs_name"
+    fi
+    unset _zs_sel _zs_dir _zs_name _zs_state _zs_new
+}
