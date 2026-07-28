@@ -1,0 +1,81 @@
+# ~/.config/restic/excludes — what NOT to snapshot.
+#
+# Managed by chezmoi. Edit the source, not this file:
+#     chezmoi edit ~/.config/restic/excludes
+#
+# The rule: exclude only what a command can rebuild, or what was never this
+# machine's state to begin with. Everything else goes in the snapshot.
+#
+# On this machine those patterns take the backup from ~490 GB to ~20 GB. That
+# ratio is the whole design — a 20 GB backup runs every night and gets checked;
+# a 490 GB one gets postponed until the disk dies. Excluding regenerable bytes
+# is not a space optimisation, it is what makes the backup habitual.
+#
+# restic matches whole path components. A pattern starting with `/` anchors to
+# the filesystem root; a bare name matches at any depth. Build output that
+# writes a CACHEDIR.TAG (cargo's `target/`, many others) needs no pattern here
+# at all — `dotfiles backup` passes --exclude-caches, which is why this list
+# has no `target` entry that would also swallow a source directory of that name.
+
+# ─── Media — bulky, replaceable, not this machine's state ────────────────────
+# 418 GB of the 490. Back this up separately if you back it up at all; it does
+# not belong in a versioned snapshot of a development machine.
+{{ .chezmoi.homeDir }}/infra/films
+
+# ─── Package manager and toolchain caches ────────────────────────────────────
+# Every one of these is reconstructed by a command that already runs during a
+# rebuild: `mise install`, `bun install`, `cargo fetch`.
+{{ .chezmoi.homeDir }}/.cache
+{{ .chezmoi.homeDir }}/.npm
+{{ .chezmoi.homeDir }}/.bun
+{{ .chezmoi.homeDir }}/.local/share/mise
+{{ .chezmoi.homeDir }}/.rustup
+{{ .chezmoi.homeDir }}/.cargo/registry
+{{ .chezmoi.homeDir }}/.cargo/git
+{{ .chezmoi.homeDir }}/go/pkg
+
+# ─── Editor and agent scratch ────────────────────────────────────────────────
+# Server binaries and extensions re-download on first connect; the browser
+# profile is a working directory, not a document.
+{{ .chezmoi.homeDir }}/.vscode-server
+{{ .chezmoi.homeDir }}/.vscode/extensions
+{{ .chezmoi.homeDir }}/.agent-browser
+
+# ─── Discarded by the user already ───────────────────────────────────────────
+{{ .chezmoi.homeDir }}/trash
+{{ .chezmoi.homeDir }}/.local/share/Trash
+
+# ─── Browser caches, but never the profile ───────────────────────────────────
+# Bookmarks, history and saved logins live beside these and ARE backed up.
+{{ .chezmoi.homeDir }}/.mozilla/firefox/*/cache2
+{{ .chezmoi.homeDir }}/.mozilla/firefox/*/storage/temporary
+
+# ─── Per-project build output and virtualenvs ────────────────────────────────
+# ~12 GB across ~/dev alone. All of it is one install command away, and none of
+# it is what you would grieve losing.
+node_modules
+.venv
+venv
+__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.next
+.nuxt
+.svelte-kit
+.turbo
+.parcel-cache
+
+# Provider binaries, hundreds of MB per workspace, restored by `terraform init`.
+.terraform
+
+# ─── Volatile ────────────────────────────────────────────────────────────────
+*.pyc
+*.swp
+.DS_Store
+
+# ─── Never snapshot the snapshots ────────────────────────────────────────────
+# Defensive: harmless while the repository lives outside $HOME, and the thing
+# that stops a runaway recursion the day someone points it at a home directory.
+/var/backups/restic
+{{ .chezmoi.homeDir }}/.local/share/restic

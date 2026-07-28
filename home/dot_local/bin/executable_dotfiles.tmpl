@@ -36,7 +36,8 @@ dotfiles — manage this machine's configuration
   update     fetch, show what would change, then apply
   edit       edit a managed file and apply it in one step
   diff       what would change if you applied right now
-  doctor     health check: tools, externals, drift, startup cost
+  doctor     health check: tools, externals, drift, backups, startup cost
+  backup     snapshot this machine (init | list | check | mount | restore)
   bench      measure interactive shell startup
   help       search every alias, function, picker and keybinding
   portable   print the single-file rc for a throwaway host
@@ -142,6 +143,51 @@ cmd_doctor() {
         fi
     fi
 
+{{- if .backups }}
+
+    say "$c_bold" 'backups'
+    if ! command -v restic > /dev/null 2>&1; then
+        warn 'restic not installed — nothing is being snapshotted'
+    elif [ ! -r "$RESTIC_ENV" ]; then
+        warn 'no ~/.config/restic/env — run: chezmoi apply'
+    else
+        . "$RESTIC_ENV"
+
+        # Age of the last SUCCESSFUL run, not "is the timer enabled" — a timer
+        # that fires nightly into a failing command looks healthy from every
+        # angle except this one.
+        if [ -f "$STATE_DIR/last-backup" ]; then
+            _age=$(( ($(date +%s) - $(cat "$STATE_DIR/last-backup")) / 86400 ))
+            if [ "$_age" -le "$BACKUP_MAX_AGE_DAYS" ]; then
+                ok "last snapshot ${_age}d ago"
+            else
+                bad "last snapshot ${_age}d ago — limit is ${BACKUP_MAX_AGE_DAYS}d"
+                rc=1
+            fi
+        else
+            warn 'never run — start with: dotfiles backup init && dotfiles backup'
+        fi
+
+        if systemctl --user is-enabled dotfiles-backup.timer > /dev/null 2>&1; then
+            ok 'nightly timer enabled'
+        else
+            warn 'timer not enabled — systemctl --user enable --now dotfiles-backup.timer'
+        fi
+
+        # The one thing a green backup check can still be lying about.
+        case "$RESTIC_REPOSITORY" in
+            sftp:* | s3:* | b2:* | gs:* | azure:* | rest:* | rclone:* | swift:*)
+                ok 'repository is off-machine'
+                ;;
+            *)
+                warn "repository is on this machine ($RESTIC_REPOSITORY)"
+                printf '        survives deleting the wrong directory, NOT the disk failing.\n'
+                printf '        docs/BACKUP.md §3 — one line to add a second target.\n'
+                ;;
+        esac
+    fi
+{{- end }}
+
     say "$c_bold" 'shell startup'
     if command -v hyperfine > /dev/null 2>&1; then
         hyperfine --warmup 3 --runs 15 --style basic 'zsh -ic exit' 2>/dev/null \
@@ -199,12 +245,288 @@ cmd_help() {
             --preview-window=hidden --height=80%
 }
 
+# ─── backup ──────────────────────────────────────────────────────────────────
+# A thin front end to restic. The wrapping is not the point — the point is that
+# the nightly timer and you at the terminal run this same function, so the
+# repository, the exclude list and the retention policy cannot differ between
+# "what I tested" and "what actually ran at 03:00". docs/BACKUP.md is the
+# restore runbook, and is the file to read first when something has gone wrong.
+
+RESTIC_ENV="${XDG_CONFIG_HOME:-$HOME/.config}/restic/env"
+RESTIC_EXCLUDES="${XDG_CONFIG_HOME:-$HOME/.config}/restic/excludes"
+
+backup_env() {
+    command -v restic > /dev/null 2>&1 || {
+        bad 'restic not installed — run: mise install'
+        exit 1
+    }
+    [ -r "$RESTIC_ENV" ] || {
+        bad "missing $RESTIC_ENV — run: chezmoi apply"
+        exit 1
+    }
+    . "$RESTIC_ENV"
+}
+
+# Local path or a remote backend? Decides whether the repository directory has
+# to be created here, and whether doctor should nag about single-disk risk.
+backup_is_local() {
+    case "$RESTIC_REPOSITORY" in
+        sftp:* | s3:* | b2:* | gs:* | azure:* | rest:* | rclone:* | swift:*) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+backup_init() {
+    if [ ! -f "$RESTIC_PASSWORD_FILE" ]; then
+        mkdir -p "$(dirname "$RESTIC_PASSWORD_FILE")"
+        (umask 077; head -c 32 /dev/urandom | base64 | tr -d '\n' > "$RESTIC_PASSWORD_FILE")
+        say "$c_bold" 'a new repository key was generated'
+        printf '\n    %s\n\n' "$(cat "$RESTIC_PASSWORD_FILE")"
+        # Said plainly because it is the one failure with no recovery path: the
+        # snapshots are encrypted with this key and restic keeps no escrow copy.
+        # A key stored only on the machine it protects is not a key.
+        warn 'store this somewhere that is NOT this laptop — Bitwarden, or paper.'
+        warn 'without it every snapshot is permanently unreadable.'
+        printf '\n'
+    fi
+
+    if backup_is_local && [ ! -d "$RESTIC_REPOSITORY" ]; then
+        parent=$(dirname "$RESTIC_REPOSITORY")
+        if [ -w "$parent" ]; then
+            mkdir -p "$RESTIC_REPOSITORY"
+        elif command -v sudo > /dev/null 2>&1; then
+            # Created root-owned then handed over, so the unprivileged timer can
+            # write to it afterwards without sudo ever appearing in the unit.
+            sudo install -d -o "$(id -u)" -g "$(id -g)" -m 700 "$RESTIC_REPOSITORY"
+        else
+            bad "cannot create $RESTIC_REPOSITORY"
+            exit 1
+        fi
+    fi
+
+    if restic cat config > /dev/null 2>&1; then
+        ok "repository already initialised at $RESTIC_REPOSITORY"
+    else
+        restic init
+        ok "repository initialised at $RESTIC_REPOSITORY"
+    fi
+}
+
+# The rebuild recipe: what a fresh install needs in order to become this machine
+# again. Cheap enough to refresh on every run, which is the only way it is still
+# accurate on the day it is needed. Everything here is unprivileged on purpose —
+# the scheduled backup must never need root.
+backup_system() {
+    sysdir="$STATE_DIR/system"
+    mkdir -p "$sysdir"
+
+    command -v dpkg > /dev/null 2>&1 \
+        && dpkg --get-selections > "$sysdir/dpkg-selections.txt" 2> /dev/null || true
+    command -v apt-mark > /dev/null 2>&1 \
+        && apt-mark showmanual > "$sysdir/apt-manual.txt" 2> /dev/null || true
+    command -v mise > /dev/null 2>&1 \
+        && mise ls --current > "$sysdir/mise-tools.txt" 2> /dev/null || true
+    command -v flatpak > /dev/null 2>&1 \
+        && flatpak list --columns=application > "$sysdir/flatpak.txt" 2> /dev/null || true
+
+    # Partition geometry and filesystem UUIDs — what you need in front of you
+    # when repartitioning a replacement disk and fixing up /etc/fstab.
+    lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,UUID,MOUNTPOINT > "$sysdir/lsblk.txt" 2> /dev/null || true
+    cp /etc/fstab "$sysdir/fstab" 2> /dev/null || true
+
+    # /etc needs root to read in full. Opportunistic only: `sudo -n` succeeds if
+    # sudo is already unlocked and fails instantly otherwise. A backup that
+    # blocks on a password prompt at 03:00 is a backup that silently stops.
+    # shadow/gshadow are skipped deliberately — password hashes do not belong in
+    # a home directory, and a rebuild sets a new password anyway.
+    if sudo -n true 2> /dev/null; then
+        sudo -n tar -czf "$sysdir/etc.tar.gz" \
+            --exclude=etc/shadow --exclude=etc/gshadow \
+            -C / etc 2> /dev/null || warn '/etc capture failed'
+        sudo -n chown "$(id -u):$(id -g)" "$sysdir/etc.tar.gz" 2> /dev/null || true
+        chmod 600 "$sysdir/etc.tar.gz" 2> /dev/null || true
+    else
+        say "$c_dim" '  /etc skipped (needs sudo) — the disk image covers it, docs/BACKUP.md §5'
+    fi
+
+    # ─── Docker volumes ──────────────────────────────────────────────────────
+    # Named volumes live under /var/lib/docker/volumes — outside $HOME, so
+    # nothing else in this backup would catch them, and they are the one place
+    # on this machine holding state that no command regenerates.
+    #
+    # Dumped through a throwaway container rather than read off disk, which
+    # keeps the job unprivileged: membership of the docker group is enough, so
+    # this still needs no sudo and no root timer.
+    #
+    # Volumes are dumped live. On a development machine that is the right trade,
+    # but a database mid-write can still produce a torn dump — stop the
+    # container first for any volume you would restore from rather than rebuild.
+    if command -v docker > /dev/null 2>&1 && docker info > /dev/null 2>&1; then
+        # A backup job has no business reaching for a registry, so the helper
+        # image is whichever tiny one is already local — never a pull. A nightly
+        # timer must not fail because a registry was unreachable.
+        _img=''
+        for _c in alpine:latest busybox:latest alpine:3.16.3; do
+            if docker image inspect "$_c" > /dev/null 2>&1; then
+                _img="$_c"
+                break
+            fi
+        done
+
+        if [ -z "$_img" ]; then
+            say "$c_dim" '  docker volumes skipped (no local alpine/busybox image)'
+        else
+            voldir="$sysdir/docker-volumes"
+            # Rebuilt each run so a volume you deleted stops being backed up
+            # forever, which is what an append-only dump directory would do.
+            rm -rf "$voldir"
+            mkdir -p "$voldir"
+            chmod 700 "$voldir"
+
+            docker volume ls -q > "$voldir/.names" 2> /dev/null || true
+            _n=0
+            while IFS= read -r _v; do
+                [ -n "$_v" ] || continue
+                # Uncompressed on purpose. restic compresses and deduplicates
+                # the repository itself, so an unchanged volume dedupes to
+                # nothing here — where a gzip stream would store a fresh,
+                # incompressible blob every single night.
+                if docker run --rm --network none -v "$_v":/vol:ro "$_img" \
+                    tar -cf - -C /vol . > "$voldir/$_v.tar" 2> /dev/null; then
+                    docker volume inspect "$_v" > "$voldir/$_v.json" 2> /dev/null || true
+                    _n=$((_n + 1))
+                else
+                    warn "docker volume $_v could not be dumped"
+                    rm -f "$voldir/$_v.tar"
+                fi
+            done < "$voldir/.names"
+            rm -f "$voldir/.names"
+
+            say "$c_dim" "  docker volumes captured: $_n"
+        fi
+    fi
+}
+
+backup_run() {
+    backup_system
+
+    # BACKUP_PATHS is a space-separated list and splitting it is the point.
+    # shellcheck disable=SC2086
+    set -- $BACKUP_PATHS
+
+    say "$c_bold" "snapshotting $* -> $RESTIC_REPOSITORY"
+
+    # --exclude-caches picks up every CACHEDIR.TAG on disk, which is how cargo's
+    # target/ and friends are skipped without a pattern broad enough to also eat
+    # a source directory of the same name.
+    # --one-file-system stops an external disk mounted under $HOME from being
+    # pulled into the snapshot of the internal one.
+    rc=0
+    restic backup "$@" \
+        --exclude-file "$RESTIC_EXCLUDES" \
+        --exclude-caches \
+        --one-file-system \
+        --tag dotfiles || rc=$?
+
+    case "$rc" in
+        0) ok 'snapshot written' ;;
+        # restic's "incomplete" code. Worth a warning, not a failure: one
+        # unreadable lock file must not mark the whole night's backup as failed.
+        3) warn 'snapshot written, but some files could not be read' ;;
+        *)
+            bad "restic backup failed (exit $rc)"
+            return "$rc"
+            ;;
+    esac
+
+    restic forget --prune \
+        --keep-daily "$BACKUP_KEEP_DAILY" \
+        --keep-weekly "$BACKUP_KEEP_WEEKLY" \
+        --keep-monthly "$BACKUP_KEEP_MONTHLY" \
+        --keep-yearly "$BACKUP_KEEP_YEARLY" \
+        --group-by host,tags > /dev/null || warn 'retention pass failed'
+
+    mkdir -p "$STATE_DIR"
+    date +%s > "$STATE_DIR/last-backup"
+}
+
+# Whole-tree recovery. Defaults to a staging directory rather than $HOME,
+# because the common case is "get one thing back" and unpacking a month-old
+# snapshot over a live home directory to achieve it is how people lose the work
+# they were trying to protect. --in-place is available, spelled out, and asks.
+backup_restore() {
+    snapshot='latest'
+    inplace=0
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --in-place) inplace=1 ;;
+            -*)
+                bad "unknown flag: $1"
+                exit 2
+                ;;
+            *) snapshot="$1" ;;
+        esac
+        shift
+    done
+
+    if [ "$inplace" -eq 1 ]; then
+        target='/'
+        warn "this unpacks snapshot $snapshot over the LIVE filesystem"
+        printf 'type RESTORE to confirm: '
+        read -r reply
+        [ "$reply" = 'RESTORE' ] || {
+            say "$c_dim" 'aborted'
+            return 1
+        }
+    else
+        target="$HOME/restore-$(date +%Y%m%d-%H%M%S)"
+        mkdir -p "$target"
+    fi
+
+    restic restore "$snapshot" --target "$target"
+    ok "restored to $target"
+}
+
+cmd_backup() {
+    action="${1:-run}"
+    [ $# -gt 0 ] && shift
+    backup_env
+
+    case "$action" in
+        run) backup_run ;;
+        init) backup_init ;;
+        list | snapshots) restic snapshots ;;
+        # Structure of every snapshot, plus a sampled re-read of the actual
+        # data. A repository that only ever gets written to is a guess.
+        check) restic check --read-data-subset=5% ;;
+        system) backup_system && ok "manifest refreshed in $STATE_DIR/system" ;;
+        # The nicest way to get one file back: browse the history as a
+        # filesystem and copy out of it. Needs fuse.
+        mount)
+            mp="${1:-$HOME/restic-mount}"
+            mkdir -p "$mp"
+            say "$c_dim" "ctrl-c to unmount $mp"
+            restic mount "$mp"
+            ;;
+        restore) backup_restore "$@" ;;
+        *)
+            bad "unknown: dotfiles backup $action"
+            printf '  try: run | init | list | check | system | mount | restore\n'
+            exit 2
+            ;;
+    esac
+}
+
 # ─── main ────────────────────────────────────────────────────────────────────
 case "${1:-help}" in
     update | up) cmd_update ;;
     edit) shift; chezmoi edit --apply "$@" ;;
     diff) shift; chezmoi diff "$@" ;;
     doctor | check) cmd_doctor ;;
+    backup)
+        shift 2> /dev/null || true
+        cmd_backup "$@"
+        ;;
     bench)
         ZELLIJ_SKIP=1 command -v hyperfine > /dev/null 2>&1 \
             && hyperfine --warmup 5 --runs 30 'zsh -ic exit' 'bash -ic exit' \

@@ -31,6 +31,17 @@
 .config/shell/secrets.sh
 {{- end }}
 
+# ─── Backups: only where there is state worth keeping ────────────────────────
+# A container is rebuilt from its image, so a snapshot of one captures nothing
+# `docker build` would not. Also skipped below tier 1, which is where restic
+# itself enters the inventory — config for a binary that is not installed is
+# just a trap for `dotfiles doctor`.
+{{- if or (not .backups) (lt .tierRank 1) }}
+.config/restic
+.config/systemd/user/dotfiles-backup.service
+.config/systemd/user/dotfiles-backup.timer
+{{- end }}
+
 # ─── minimal tier: the vi-compatible fallback only, no editor, no multiplexer ─
 {{- if lt .tierRank 1 }}
 .config/nvim

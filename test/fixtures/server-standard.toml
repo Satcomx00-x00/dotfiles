@@ -18,4 +18,5 @@
     autoAttach     = true
     chsh           = true
     staleness      = true
+    backups        = true
     nodeHeapMB     = 2048

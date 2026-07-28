@@ -80,6 +80,10 @@
     # A staleness hint on an ephemeral host is noise about a machine that will
     # not exist tomorrow.
     staleness  = {{ not $isContainer }}
+    # Scheduled snapshots need state worth keeping and a session that outlives
+    # the task. A container is rebuilt from its image — snapshotting one backs
+    # up nothing that `docker build` would not reproduce.
+    backups    = {{ not $isContainer }}
     # Servers and containers are memory-constrained relative to a workstation.
     nodeHeapMB = {{ $isWorkstation | ternary 8192 2048 }}
 

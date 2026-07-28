@@ -1,0 +1,89 @@
+#!/bin/sh
+# Phase 6 — register the nightly snapshot timer.
+#
+# run_onchange, keyed on the unit files below, so editing the schedule or the
+# service actually takes effect. systemd caches unit files aggressively; without
+# the daemon-reload here an edited timer keeps running the old definition and
+# looks, from every command you would think to run, entirely correct.
+#
+# service: {{ include "dot_config/systemd/user/dotfiles-backup.service" | sha256sum }}
+# timer:   {{ include "dot_config/systemd/user/dotfiles-backup.timer" | sha256sum }}
+#
+# OPTIONAL phase: a machine with no backup timer is worse than one with, but far
+# better than one whose apply died trying to install it.
+
+set -eu
+
+log() { printf '  backup: %s\n' "$*"; }
+{{- if or (not .backups) (lt .tierRank 1) }}
+
+# This machine takes no backups (container, or below the tier that installs
+# restic). Emitted as a real early exit rather than an empty script so that
+# `chezmoi apply` still shows the phase and says why it did nothing.
+log 'not enabled on this machine'
+exit 0
+{{- end }}
+
+# ─── Preconditions ───────────────────────────────────────────────────────────
+# Every one of these is a normal machine state, not an error: a container has no
+# systemd, a CI runner has no session bus, and a minimal tier has no restic.
+if [ "${DOTFILES_SKIP_BACKUP_TIMER:-0}" = "1" ]; then
+    log 'skipped (DOTFILES_SKIP_BACKUP_TIMER=1)'
+    exit 0
+fi
+
+command -v systemctl > /dev/null 2>&1 || {
+    log 'no systemd — skipping timer'
+    exit 0
+}
+
+# `systemctl --user` needs a running user manager. In a container or over a
+# bare SSH exec there is none, and every call fails with a confusing
+# "Failed to connect to bus" that looks like a broken unit.
+systemctl --user show-environment > /dev/null 2>&1 || {
+    log 'no user session bus — skipping timer'
+    exit 0
+}
+
+systemctl --user daemon-reload
+
+if systemctl --user enable --now dotfiles-backup.timer > /dev/null 2>&1; then
+    log 'nightly timer enabled'
+else
+    log 'WARN could not enable dotfiles-backup.timer'
+    exit 0
+fi
+
+# ─── Linger ──────────────────────────────────────────────────────────────────
+# User timers only run while the user has a session. That is fine on a laptop
+# you log into daily, and quietly wrong on a machine you mostly reach over SSH:
+# the timer is enabled, looks healthy, and never fires. Reported rather than
+# changed — enabling linger is a policy decision, not a dotfiles one.
+if command -v loginctl > /dev/null 2>&1; then
+    if [ "$(loginctl show-user "$(id -un)" -p Linger --value 2> /dev/null || echo no)" != "yes" ]; then
+        log "note: no linger — timer runs only while logged in"
+        log "      always-on:  sudo loginctl enable-linger $(id -un)"
+    fi
+fi
+
+# ─── First-run pointer ───────────────────────────────────────────────────────
+# The repository is NOT created here. Initialising it generates the encryption
+# key, and that key is printed exactly once with a warning that it must leave
+# this machine — a message that has no business scrolling past in the middle of
+# a hundred-line apply. It is a deliberate, single, interactive step.
+_repo_ready=0
+if command -v restic > /dev/null 2>&1 && [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/restic/env" ]; then
+    # Subshell: the env file exports RESTIC_* and this script should not leak
+    # them into whatever chezmoi runs next.
+    if (
+        . "${XDG_CONFIG_HOME:-$HOME/.config}/restic/env"
+        restic cat config > /dev/null 2>&1
+    ); then
+        _repo_ready=1
+    fi
+fi
+
+if [ "$_repo_ready" -eq 0 ]; then
+    log 'repository not initialised yet — the timer will fail until it is:'
+    log '      dotfiles backup init'
+fi

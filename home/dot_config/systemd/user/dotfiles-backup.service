@@ -1,0 +1,33 @@
+# Managed by chezmoi. Edit the source, not this file.
+#
+# A user unit, not a system one, and that is the whole design: the snapshot only
+# ever touches $HOME, so it needs no root, no sudo in a timer, and no privileged
+# process holding the repository key.
+
+[Unit]
+Description=Snapshot this machine with restic
+Documentation=file://%h/.local/share/chezmoi/docs/BACKUP.md
+# Pointless without a network target when the repository is remote, and
+# harmless when it is local.
+After=network-online.target
+
+[Service]
+Type=oneshot
+
+# mise installs restic as a shim, and a systemd unit sources no shell rc — so
+# `mise activate` never runs and PATH must be spelled out here. This is the
+# single most common reason a hand-rolled backup timer works interactively and
+# fails from the timer.
+Environment=PATH=%h/.local/share/mise/shims:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+ExecStart=%h/.local/bin/dotfiles backup
+
+# A backup is never the most important thing the laptop is doing. Yield CPU and
+# disk to whatever the user is actually working on.
+Nice=10
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+
+# The repository key and the data are the only things this needs to reach.
+PrivateTmp=true
+NoNewPrivileges=true

@@ -628,6 +628,16 @@
     group   = "secrets"
     role    = "encrypted config files"
 
+# ═══ Backup ══════════════════════════════════════════════════════════════════
+
+[[tools.list]]
+    name    = "restic"
+    backend = "aqua:restic/restic"
+    version = "latest"
+    rank    = 1
+    group   = "backup"
+    role    = "deduplicated encrypted snapshots — drives `dotfiles backup`"
+
 # ═══ Workflow ════════════════════════════════════════════════════════════════
 
 [[tools.list]]

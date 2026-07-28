@@ -1,0 +1,23 @@
+# Managed by chezmoi. Edit the source, not this file.
+
+[Unit]
+Description=Nightly restic snapshot
+Documentation=file://%h/.local/share/chezmoi/docs/BACKUP.md
+
+[Timer]
+# Daily rather than hourly: restic deduplicates, so an hourly snapshot of a
+# development machine is cheap — but every extra run is another chance to be
+# holding a repository lock when the laptop suspends. Nightly, with a catch-up.
+OnCalendar=daily
+
+# The setting that makes this work on a laptop at all. A machine asleep at
+# 03:00 would otherwise simply skip the night; Persistent runs the missed job
+# once it wakes instead.
+Persistent=true
+
+# Nothing else is competing at 03:00, but a fixed instant means the backup
+# always lands on the same moment of the workday if the machine is a nomad.
+RandomizedDelaySec=30m
+
+[Install]
+WantedBy=timers.target

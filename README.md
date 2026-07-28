@@ -224,6 +224,12 @@ independent, so a small VPS can be a `server` on `minimal`.
 | `age` | file encryption primitive | standard | `aqua:FiloSottile/age` |
 | `sops` | encrypted config files | full | `aqua:getsops/sops` |
 
+**backup**
+
+| Tool | Role | Tier | Source |
+| --- | --- | --- | --- |
+| `restic` | deduplicated encrypted snapshots — drives `dotfiles backup` | standard | `aqua:restic/restic` |
+
 **workflow**
 
 | Tool | Role | Tier | Source |
@@ -234,7 +240,7 @@ independent, so a small VPS can be a `server` on `minimal`.
 | `win32yank` | WSL2 clipboard bridge for Neovim | standard | `github:equalsraf/win32yank` |
 
 
-Totals: **minimal** 11 · **standard** 40 · **full** 72
+Totals: **minimal** 11 · **standard** 41 · **full** 73
 <!-- END GENERATED: tools -->
 
 ---
@@ -289,6 +295,7 @@ and fails on any diff, because a generation convention without a gate decays.
 
 ## Docs
 
+- [docs/BACKUP.md](docs/BACKUP.md) — snapshots, restoring, and bare-metal recovery
 - [docs/SECRETS.md](docs/SECRETS.md) — Bitwarden and Vaultwarden setup
 - [docs/CUSTOMIZING.md](docs/CUSTOMIZING.md) — adding a tool, alias, language or profile
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — known failures per distro
