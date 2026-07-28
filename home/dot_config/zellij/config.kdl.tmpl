@@ -43,9 +43,11 @@ themes {
 // ─── Behaviour ───────────────────────────────────────────────────────────────
 default_layout "default"
 default_mode "normal"
-// zjstatus draws the status bar; Zellij's own frames would duplicate the
-// information and cost two rows.
-pane_frames false
+// Frames draw the border and title around each pane, so a split tells you
+// which pane has focus without moving the cursor. Unconditionally — zjstatus
+// deliberately does NOT set `hide_frame_for_single_pane`, so an unsplit pane
+// is framed too and the viewport never resizes under you when you split.
+pane_frames true
 // Decision #24: leave the copy to the terminal via OSC52, so yanking on a
 // REMOTE server lands in the LOCAL clipboard, over the SSH connection itself.
 // Setting copy_command here would intercept that and break it.

@@ -218,6 +218,26 @@
     role    = "terminal multiplexer"
     pin     = "KDL config format has broken across minor releases; an unpinned upgrade can leave a remote box with no working multiplexer"
 
+# ═══ Terminal emulator ═══════════════════════════════════════════════════════
+# The one deliberate exception to decision #47's backend order. Alacritty ships
+# NO Linux binary — its releases carry only .msi/.exe/.dmg plus man pages — so
+# aqua, github and ubi all have nothing to fetch and cargo is the only backend
+# left. That makes it a source build: slow, and it drags in `rust` (rank 2), so
+# it cannot sit below the full tier however much a workstation wants it.
+#
+# Ghostty has no entry because it has no backend at all: its releases are macOS
+# archives and a source tarball needing Zig and GTK4. Install it from the distro
+# (Arch extra, Fedora COPR) or Flatpak; `~/.config/ghostty/config` is templated
+# either way, gated on `.terminals`.
+
+[[tools.list]]
+    name    = "alacritty"
+    backend = "cargo:alacritty"
+    version = "latest"
+    rank    = 2
+    group   = "terminal"
+    role    = "GPU terminal emulator — built from source, no Linux binary exists"
+
 # ═══ Runtimes and package managers (decision #39) ════════════════════════════
 
 [[tools.list]]

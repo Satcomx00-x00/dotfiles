@@ -148,6 +148,12 @@ independent, so a small VPS can be a `server` on `minimal`.
 | --- | --- | --- | --- |
 | `zellij` | terminal multiplexer | standard | `aqua:zellij-org/zellij` **PIN 0.44.3** |
 
+**terminal**
+
+| Tool | Role | Tier | Source |
+| --- | --- | --- | --- |
+| `alacritty` | GPU terminal emulator — built from source, no Linux binary exists | full | `cargo:alacritty` |
+
 **runtime**
 
 | Tool | Role | Tier | Source |
@@ -234,7 +240,7 @@ independent, so a small VPS can be a `server` on `minimal`.
 | `win32yank` | WSL2 clipboard bridge for Neovim | standard | `github:equalsraf/win32yank` |
 
 
-Totals: **minimal** 11 · **standard** 40 · **full** 72
+Totals: **minimal** 11 · **standard** 40 · **full** 73
 <!-- END GENERATED: tools -->
 
 ---

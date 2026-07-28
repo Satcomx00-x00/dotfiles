@@ -51,9 +51,13 @@ else
 fi
 
 # ─── layouts ─────────────────────────────────────────────────────────────────
+# `-n`, NOT `-l`: combined with `-s`, `--layout` means "add this layout as tabs
+# to the named session", so it tries to ATTACH and dies with "Session not
+# found" — a message the regex below does not match, which made this loop pass
+# without ever starting a session. `--new-session-with-layout` always creates.
 for l in default dev ops; do
-    out=$(script -qec "ZELLIJ_CONFIG_DIR=$BUILD timeout 10 zellij -s verify-$l -l $l" /dev/null 2>&1 |
-        tr -d '\r' | grep -iE 'error|invalid|expected|failed|panic|caused by' | head -4 || true)
+    out=$(script -qec "ZELLIJ_CONFIG_DIR=$BUILD timeout 10 zellij -s verify-$l -n $l" /dev/null 2>&1 |
+        tr -d '\r' | grep -iE 'error|invalid|expected|failed|panic|caused by|not found' | head -4 || true)
     ZELLIJ_CONFIG_DIR="$BUILD" zellij delete-session "verify-$l" --force > /dev/null 2>&1 || true
 
     if [ -n "$out" ]; then
