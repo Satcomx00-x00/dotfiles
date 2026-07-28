@@ -37,7 +37,7 @@ mkdir -p "$BUILD"
 # tells the reader which machines actually get each one.
 "$CHEZMOI" execute-template --source "$ROOT" --config "$FIXTURE" > "$BUILD/tools.md" << 'TPL'
 {{- $tiers := .tools.tiers -}}
-{{- $groups := list "prompt" "core-cli" "system" "git" "editor" "multiplexer" "runtime" "lsp" "container" "k8s" "infra" "secrets" "workflow" -}}
+{{- $groups := list "prompt" "core-cli" "system" "git" "editor" "multiplexer" "runtime" "lsp" "container" "k8s" "infra" "secrets" "backup" "workflow" -}}
 {{- range $g := $groups }}
 {{- $any := false }}
 {{- range $.tools.list }}{{ if eq .group $g }}{{ $any = true }}{{ end }}{{ end }}
