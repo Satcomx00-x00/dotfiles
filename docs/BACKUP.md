@@ -52,6 +52,23 @@ Check your own split before trusting those proportions:
 du -sh ~/* ~/.[a-z]* 2>/dev/null | sort -rh | head -20
 ```
 
+`~/.config/restic/excludes` covers what is true of any developer machine. What
+is true only of *this* one — a media library, a scratch mount, a client's tree —
+goes in a file beside it that is **not** managed and **not** committed:
+
+```sh
+# ~/.config/restic/excludes.local
+/home/you/some-media-library
+```
+
+Same reasoning as `env.local` in §3 (decision #30): this repository is public,
+and a list of paths is a description of the machine. `dotfiles backup` passes it
+as a second `--exclude-file` whenever it exists, and does nothing special when
+it does not.
+
+> Create this **before** the first backup on a machine with a large media
+> directory. Otherwise the first run cheerfully snapshots all of it.
+
 Everything else goes in — including `.git` directories, SSH keys, browser
 profiles and `~/.claude`. When in doubt the file is kept; the exclude list names
 only things with a command that regenerates them.

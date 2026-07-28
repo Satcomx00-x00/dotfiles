@@ -17,10 +17,19 @@
 # at all — `dotfiles backup` passes --exclude-caches, which is why this list
 # has no `target` entry that would also swallow a source directory of that name.
 
-# ─── Media — bulky, replaceable, not this machine's state ────────────────────
-# 418 GB of the 490. Back this up separately if you back it up at all; it does
-# not belong in a versioned snapshot of a development machine.
-{{ .chezmoi.homeDir }}/infra/films
+# ─── Machine-specific excludes live NEXT DOOR ────────────────────────────────
+# Anything naming a directory that exists only on one machine — a media library,
+# a scratch mount, a client's tree — belongs in:
+#
+#     ~/.config/restic/excludes.local
+#
+# which is not managed and not committed, for the same reason
+# ~/.config/restic/env.local and ~/.ssh/config.d are not (decision #30). This
+# repository is public; a path list is a description of the machine.
+#
+# `dotfiles backup` passes that file as a second --exclude-file whenever it
+# exists. Nothing breaks when it does not — that is the ordinary case on a
+# freshly built machine, which by definition has no such directories yet.
 
 # ─── Package manager and toolchain caches ────────────────────────────────────
 # Every one of these is reconstructed by a command that already runs during a

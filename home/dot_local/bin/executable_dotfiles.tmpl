@@ -254,6 +254,7 @@ cmd_help() {
 
 RESTIC_ENV="${XDG_CONFIG_HOME:-$HOME/.config}/restic/env"
 RESTIC_EXCLUDES="${XDG_CONFIG_HOME:-$HOME/.config}/restic/excludes"
+RESTIC_EXCLUDES_LOCAL="${XDG_CONFIG_HOME:-$HOME/.config}/restic/excludes.local"
 
 backup_env() {
     command -v restic > /dev/null 2>&1 || {
@@ -410,23 +411,32 @@ backup_system() {
 backup_run() {
     backup_system
 
-    # BACKUP_PATHS is a space-separated list and splitting it is the point.
-    # shellcheck disable=SC2086
-    set -- $BACKUP_PATHS
+    say "$c_bold" "snapshotting $BACKUP_PATHS -> $RESTIC_REPOSITORY"
 
-    say "$c_bold" "snapshotting $* -> $RESTIC_REPOSITORY"
+    # Flags first, paths last — restic takes `backup [flags] PATH...`.
+    set -- --exclude-file "$RESTIC_EXCLUDES"
+
+    # Machine-specific excludes, kept out of the repository for exactly the
+    # reason env.local is (decision #30): a line naming ~/some-media-directory
+    # describes THIS machine, and the repository is public. Optional, and a
+    # machine without one is the ordinary case.
+    if [ -r "$RESTIC_EXCLUDES_LOCAL" ]; then
+        set -- "$@" --exclude-file "$RESTIC_EXCLUDES_LOCAL"
+    fi
 
     # --exclude-caches picks up every CACHEDIR.TAG on disk, which is how cargo's
     # target/ and friends are skipped without a pattern broad enough to also eat
     # a source directory of the same name.
     # --one-file-system stops an external disk mounted under $HOME from being
     # pulled into the snapshot of the internal one.
+    set -- "$@" --exclude-caches --one-file-system --tag dotfiles
+
+    # BACKUP_PATHS is a space-separated list and splitting it is the point.
+    # shellcheck disable=SC2086
+    set -- "$@" $BACKUP_PATHS
+
     rc=0
-    restic backup "$@" \
-        --exclude-file "$RESTIC_EXCLUDES" \
-        --exclude-caches \
-        --one-file-system \
-        --tag dotfiles || rc=$?
+    restic backup "$@" || rc=$?
 
     case "$rc" in
         0) ok 'snapshot written' ;;
