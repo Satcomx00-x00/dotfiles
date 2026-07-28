@@ -86,7 +86,7 @@ independent, so a small VPS can be a `server` on `minimal`.
 | Prompt | Starship — two lines, transient; a neon violet monochrome, so any hue in it is information |
 | Theme | Tokyo Night, defined once and templated into 12 configs |
 | Editor | Neovim on lazy.nvim — snacks.nvim, blink.cmp, lualine |
-| Multiplexer | Zellij with zjstatus (mode hints in the bar), per-project sessions via the `zs` sessionizer (`Ctrl-f`), unified `Ctrl-hjkl` across editor and panes |
+| Multiplexer | Zellij with zjstatus on top (mode, tabs, session) and the native status-bar underneath (the mode's keybindings), per-project sessions via the `zs` sessionizer (`Ctrl-f`), unified `Ctrl-hjkl` across editor and panes |
 | Tools | mise, `aqua` backend first for free signature verification |
 | Clipboard | OSC52 — yanking on a remote server reaches your local clipboard |
 | Secrets | Bitwarden at apply time; nothing sensitive in the repo |

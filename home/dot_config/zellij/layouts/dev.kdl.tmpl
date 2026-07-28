@@ -1,11 +1,12 @@
 {{- /* `zellij --layout dev` — editor, a terminal, and somewhere for logs.
      This is also the layout every session created by the `zs` sessionizer
-     starts with. The status bar is the shared zjstatus template, so a
-     sessionizer session is indistinguishable from the default one. */ -}}
+     starts with. The status bars are the shared templates, so a sessionizer
+     session is indistinguishable from the default one. */ -}}
 layout {
     default_tab_template {
 {{ template "zjstatus" . }}
         children
+{{ template "zellij-keyhints" . }}
     }
     tab name="code" focus=true {
         pane split_direction="vertical" {

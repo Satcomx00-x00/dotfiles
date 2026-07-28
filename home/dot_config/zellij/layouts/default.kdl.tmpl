@@ -1,12 +1,14 @@
-{{- /* Default layout: one pane, one status bar.
+{{- /* Default layout: one pane, two status bars.
 
-     The bar itself lives in .chezmoitemplates/zjstatus (decision #12) and is
-     shared by every layout. The mode indicator matters here: decision #42
-     keeps the default modal keybindings, so knowing which mode you are in —
-     and what it answers to — is not optional. */ -}}
+     Both bars live in .chezmoitemplates (decision #12) and are shared by every
+     layout. The mode indicator matters here: decision #42 keeps the default
+     modal keybindings, so knowing which mode you are in — and what it answers
+     to — is not optional. zjstatus names the mode on top; Zellij's native
+     status-bar spells out that mode's keys along the bottom. */ -}}
 layout {
     default_tab_template {
 {{ template "zjstatus" . }}
         children
+{{ template "zellij-keyhints" . }}
     }
 }
