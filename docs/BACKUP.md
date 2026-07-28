@@ -158,9 +158,64 @@ For B2 or S3 the credentials go in the same `env.local`, as
 `B2_ACCOUNT_ID` / `B2_ACCOUNT_KEY`. For an external disk, the backup simply
 fails on the nights it is unplugged, which is the correct behaviour.
 
-Keeping both a local and a remote copy is worth it — run the second as
-`RESTIC_REPOSITORY=... restic backup ...`, or copy between repositories with
-`restic copy`.
+### Keep both: local for speed, remote for disaster
+
+Rather than moving the repository off-machine, set a **mirror** and keep both:
+
+```sh
+# ~/.config/restic/env.local
+BACKUP_MIRROR_REPOSITORY="rclone:gdrive:restic"
+```
+
+Every run backs up locally first, then copies the new snapshots onward. They
+fail differently, which is the point — the local repository restores a deleted
+file in seconds with no network, and the remote one is what still exists after
+the laptop is stolen. `restic copy` transfers only what the destination lacks,
+so the nightly cost is the day's changes rather than the whole repository.
+
+If the mirror is unreachable the local snapshot is already written and the run
+still succeeds; `dotfiles doctor` reports the mirror separately and fails if it
+is configured but empty.
+
+### Google Drive
+
+restic has no Drive backend — `rclone` bridges it. Configure the remote once:
+
+```sh
+rclone config
+#  n) new remote   →  name it `gdrive`   →  storage: drive
+#  scope: 1 (full access)   →  leave the client id/secret blank for now
+#  y) use auto config  →  a browser opens for the Google login
+rclone lsd gdrive:            # confirm it works
+```
+
+Then point the mirror at it and initialise:
+
+```sh
+# ~/.config/restic/env.local
+BACKUP_MIRROR_REPOSITORY="rclone:gdrive:restic"
+```
+
+```sh
+dotfiles backup init          # creates the mirror with the same key
+dotfiles backup               # first copy — the slow one
+```
+
+Three things about Drive specifically, learned the hard way by many people:
+
+- **Make your own OAuth client ID.** rclone ships a shared one that every user
+  on earth is hammering, and Google throttles it hard — the difference is
+  routinely 10× on upload. `rclone config` → the remote → `client_id`. rclone's
+  own documentation walks through creating one in Google Cloud Console.
+- **Watch the quota.** The free tier is 15 GB shared across Gmail, Photos and
+  Drive. This repository is small, but it grows with your history.
+- **Drive dislikes many small files**, which is exactly restic's access
+  pattern. It works, and it is slower than object storage. If it frustrates
+  you, Backblaze B2 is a drop-in `RESTIC_REPOSITORY`/mirror change and costs
+  cents per month at this size.
+
+The Drive copy is encrypted before it leaves the machine. Google stores opaque
+packs and never sees a filename.
 
 ## 4. Restoring
 

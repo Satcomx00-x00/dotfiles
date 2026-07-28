@@ -229,6 +229,7 @@ independent, so a small VPS can be a `server` on `minimal`.
 | Tool | Role | Tier | Source |
 | --- | --- | --- | --- |
 | `restic` | deduplicated encrypted snapshots — drives `dotfiles backup` | standard | `aqua:restic/restic` |
+| `rclone` | storage backend bridge — reaches Drive, OneDrive and the rest that restic cannot | standard | `aqua:rclone/rclone` |
 
 **workflow**
 
@@ -240,7 +241,7 @@ independent, so a small VPS can be a `server` on `minimal`.
 | `win32yank` | WSL2 clipboard bridge for Neovim | standard | `github:equalsraf/win32yank` |
 
 
-Totals: **minimal** 11 · **standard** 41 · **full** 73
+Totals: **minimal** 11 · **standard** 42 · **full** 74
 <!-- END GENERATED: tools -->
 
 ---

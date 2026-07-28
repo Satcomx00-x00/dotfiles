@@ -638,6 +638,14 @@
     group   = "backup"
     role    = "deduplicated encrypted snapshots — drives `dotfiles backup`"
 
+[[tools.list]]
+    name    = "rclone"
+    backend = "aqua:rclone/rclone"
+    version = "latest"
+    rank    = 1
+    group   = "backup"
+    role    = "storage backend bridge — reaches Drive, OneDrive and the rest that restic cannot"
+
 # ═══ Workflow ════════════════════════════════════════════════════════════════
 
 [[tools.list]]

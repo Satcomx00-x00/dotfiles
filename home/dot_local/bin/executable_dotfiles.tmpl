@@ -174,17 +174,31 @@ cmd_doctor() {
             warn 'timer not enabled — systemctl --user enable --now dotfiles-backup.timer'
         fi
 
-        # The one thing a green backup check can still be lying about.
-        case "$RESTIC_REPOSITORY" in
-            sftp:* | s3:* | b2:* | gs:* | azure:* | rest:* | rclone:* | swift:*)
-                ok 'repository is off-machine'
-                ;;
-            *)
-                warn "repository is on this machine ($RESTIC_REPOSITORY)"
-                printf '        survives deleting the wrong directory, NOT the disk failing.\n'
-                printf '        docs/BACKUP.md §3 — one line to add a second target.\n'
-                ;;
-        esac
+        # The one thing a green backup check can still be lying about: every
+        # snapshot sitting on the disk it is protecting.
+        if [ -n "$BACKUP_MIRROR_REPOSITORY" ]; then
+            # Ask the mirror what it actually holds rather than trusting that
+            # the variable being set means the copies are arriving.
+            _m=$(restic -r "$BACKUP_MIRROR_REPOSITORY" snapshots --json 2> /dev/null \
+                | grep -o '"short_id"' | wc -l | tr -d ' ')
+            if [ "${_m:-0}" -gt 0 ]; then
+                ok "off-machine mirror holds $_m snapshot(s)"
+            else
+                bad "mirror configured but unreachable or empty ($BACKUP_MIRROR_REPOSITORY)"
+                rc=1
+            fi
+        else
+            case "$RESTIC_REPOSITORY" in
+                sftp:* | s3:* | b2:* | gs:* | azure:* | rest:* | rclone:* | swift:*)
+                    ok 'repository is off-machine'
+                    ;;
+                *)
+                    warn "repository is on this machine ($RESTIC_REPOSITORY)"
+                    printf '        survives deleting the wrong directory, NOT the disk failing.\n'
+                    printf '        docs/BACKUP.md §3 — one line to add a second target.\n'
+                    ;;
+            esac
+        fi
     fi
 {{- end }}
 
@@ -311,6 +325,52 @@ backup_init() {
         restic init
         ok "repository initialised at $RESTIC_REPOSITORY"
     fi
+
+    # The mirror is initialised with the SAME key, which is what lets `copy`
+    # transfer packs rather than decrypt and re-encrypt them.
+    if [ -n "$BACKUP_MIRROR_REPOSITORY" ]; then
+        if restic -r "$BACKUP_MIRROR_REPOSITORY" cat config > /dev/null 2>&1; then
+            ok "mirror already initialised at $BACKUP_MIRROR_REPOSITORY"
+        elif restic -r "$BACKUP_MIRROR_REPOSITORY" init \
+            --copy-chunker-params --from-repo "$RESTIC_REPOSITORY" \
+            --from-password-file "$RESTIC_PASSWORD_FILE"; then
+            # --copy-chunker-params matters more than it looks: without it the
+            # mirror splits files differently, so identical data deduplicates
+            # against nothing and the copy stores a second full set of packs.
+            ok "mirror initialised at $BACKUP_MIRROR_REPOSITORY"
+        else
+            bad "could not initialise mirror at $BACKUP_MIRROR_REPOSITORY"
+            return 1
+        fi
+    fi
+}
+
+# Push new snapshots to the off-machine copy. Runs after the local backup, never
+# instead of it: a network that is down, a token that expired or a quota that
+# filled must not cost you the local snapshot that was already written fine.
+backup_mirror() {
+    [ -n "$BACKUP_MIRROR_REPOSITORY" ] || return 0
+
+    say "$c_bold" "mirroring -> $BACKUP_MIRROR_REPOSITORY"
+
+    if restic -r "$BACKUP_MIRROR_REPOSITORY" copy \
+        --from-repo "$RESTIC_REPOSITORY" \
+        --from-password-file "$RESTIC_PASSWORD_FILE" > /dev/null; then
+        ok 'mirror up to date'
+    else
+        warn 'mirror copy failed — the local snapshot is unaffected'
+        return 0
+    fi
+
+    # Retention is applied to the mirror separately: `copy` only ever adds, so
+    # without this the remote grows forever while the local one stays pruned.
+    restic -r "$BACKUP_MIRROR_REPOSITORY" forget \
+        --keep-daily "$BACKUP_KEEP_DAILY" \
+        --keep-weekly "$BACKUP_KEEP_WEEKLY" \
+        --keep-monthly "$BACKUP_KEEP_MONTHLY" \
+        --keep-yearly "$BACKUP_KEEP_YEARLY" \
+        --group-by host,tags > /dev/null 2>&1 \
+        || warn 'mirror retention pass failed'
 }
 
 # The rebuild recipe: what a fresh install needs in order to become this machine
@@ -458,6 +518,8 @@ backup_run() {
 
     mkdir -p "$STATE_DIR"
     date +%s > "$STATE_DIR/last-backup"
+
+    backup_mirror
 }
 
 # Whole-tree recovery. Defaults to a staging directory rather than $HOME,
