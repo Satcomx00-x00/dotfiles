@@ -510,11 +510,13 @@ sudo() {
     # --preserve-env carries the variables through sudoers' env_reset; the
     # explicit `env PATH=` is needed as well, because secure_path in
     # /etc/sudoers overrides even a preserved PATH on most distributions.
+    # The sbin directories are appended because the user PATH lacks them,
+    # and without them root-only commands (reboot, ip, …) vanish under sudo.
     command sudo \
         --preserve-env=PATH,EDITOR,VISUAL,PAGER,LANG,LC_ALL,TERM,COLORTERM \
         --preserve-env=XDG_CONFIG_HOME,XDG_DATA_HOME,XDG_STATE_HOME,XDG_CACHE_HOME \
         --preserve-env=KUBECONFIG,AWS_PROFILE,AWS_REGION,STARSHIP_CONFIG \
-        env "PATH=$PATH" "$@"
+        env "PATH=$PATH:/usr/local/sbin:/usr/sbin:/sbin" "$@"
 }
 
 # @group net — ports and connectivity
