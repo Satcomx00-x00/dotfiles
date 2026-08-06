@@ -14,7 +14,10 @@
                 format_right  "#[bg={{ $u.statusline_bg }},fg={{ $p.comment }}]{command_host}#[bg={{ $u.statusline_bg }},fg={{ $p.blue7 }}] | #[bg={{ $u.statusline_bg }},fg={{ $p.blue }}]{session} #[bg={{ $u.statusline_bg }},fg={{ $p.blue7 }}]| #[bg={{ $u.statusline_bg }},fg={{ $p.fg_dark }}]{datetime}"
                 format_space  "#[bg={{ $u.statusline_bg }}]"
                 format_hide_on_overlength "true"
-                format_precedence "lrs"
+                // The tokens are the three format_* sections: left, right,
+                // center. There is no token for format_space — an unknown one
+                // makes zjstatus reject the whole precedence and draw nothing.
+                format_precedence "lrc"
 
                 border_enabled  "false"
 

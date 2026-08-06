@@ -48,7 +48,7 @@ rest of the document elaborates on it.
 | 9 | Terminal emulators managed | **Alacritty** and **Ghostty** |
 | 10 | Font | **JetBrainsMono Nerd Font** (workstations only) |
 | 11 | Multiplexer | **Zellij only** — no tmux, no fallback |
-| 12 | Zellij plugins | **zjstatus**, **vim-zellij-navigator + autolock**, **room** |
+| 12 | Zellij plugins | **zjstatus**, **vim-zellij-navigator**, **room** |
 | 13 | Zellij sessions | **Auto-attach per host**, named after the hostname |
 | 14 | Editor | **Hand-rolled Neovim on lazy.nvim** |
 | 15 | Language support | **All four stacks**: shell/Docker/Make, Python/Go/Rust, TypeScript/web, Terraform/YAML/K8s/Ansible |
@@ -390,7 +390,6 @@ on `minimal` machines.
 | zellij | The multiplexer — **PIN** (KDL format has broken across minor releases) | s |
 | zjstatus | Single-line configurable status bar, Tokyo Night themed | s |
 | vim-zellij-navigator | Unified Ctrl-hjkl across Neovim splits and Zellij panes | s |
-| zellij-autolock | Auto-locks Zellij when Neovim has focus so vim binds are never stolen | s |
 | room | Fuzzy session and project switcher on one keybind | s |
 
 ### 7.9 Containers
@@ -557,7 +556,7 @@ every consumer. No tool keeps its own hardcoded colours.
 | fzf | `--color` flags exported from the palette; every picker matches |
 | eza | `EZA_COLORS` derived from the palette |
 | btop, k9s | Generated theme files |
-| Ghostty, Alacritty | Full 16-colour palette plus cursor and selection colours |
+| Ghostty, Alacritty | Full 16-colour palette plus cursor and selection colours — from `[theme.terminal]` (xcad2k dark), not the Tokyo Night ring |
 
 ### 8.6 Prompt
 
@@ -650,7 +649,7 @@ zjstatus bar shows the active mode at all times.
 
 | File | Contents |
 | --- | --- |
-| `~/.config/zellij/config.kdl` | Tokyo Night theme, zjstatus replacing the default two-line bar, the default modal keybindings plus the `room` session switcher and unified Ctrl-hjkl navigation, autolock for Neovim, OSC52 copy, scrollback and mouse settings |
+| `~/.config/zellij/config.kdl` | Tokyo Night theme, zjstatus replacing the default two-line bar, the default modal keybindings plus the `room` session switcher and unified Ctrl-hjkl navigation, pane frames, OSC52 copy, scrollback and mouse settings |
 | `~/.config/zellij/layouts/default.kdl` | Single-pane layout with the zjstatus bar |
 | `~/.config/zellij/layouts/dev.kdl` | Editor pane plus a split terminal and a log pane |
 | `~/.config/zellij/layouts/ops.kdl` | Multi-pane server layout: shell, logs, resource monitor |

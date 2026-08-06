@@ -14,8 +14,6 @@
 //   Alt-x, Alt-m   close / fullscreen the focused pane without entering pane
 //                  mode — completing the stock Alt layer (Alt-n new, Alt-f
 //                  floating, Alt-h/j/k/l focus are upstream defaults)
-//   autolock       locks Zellij while Neovim has focus, so vim keys are never
-//                  stolen mid-edit
 //
 // The `zs` sessionizer (pickers.sh, Ctrl-f in the shell) creates per-project
 // sessions with the dev layout; it is shell-side, so nothing here binds it.
@@ -62,22 +60,6 @@ session_serialization true
 pane_viewport_serialization true
 show_startup_tips false
 show_release_notes false
-
-// ─── Plugins ─────────────────────────────────────────────────────────────────
-plugins {
-    // Auto-lock: while Neovim (or another modal program) has focus, Zellij
-    // enters Locked mode so Ctrl-h and friends reach the editor untouched.
-    autolock location="file:{{ $home }}/.local/share/zellij/plugins/zellij-autolock.wasm" {
-        is_enabled true
-        triggers "nvim|vim|git|fzf|zellij|lazygit|k9s|btop"
-        reaction_seconds "0.3"
-        print_to_log true
-    }
-}
-
-load_plugins {
-    autolock
-}
 
 // ─── Keybindings ─────────────────────────────────────────────────────────────
 // `keybinds` without `clear-defaults=true` LAYERS on top of the stock scheme,

@@ -5,8 +5,8 @@
 -- One muscle memory for both, and the seam is invisible.
 --
 -- The Zellij half is vim-zellij-navigator, bound in ~/.config/zellij/config.kdl.
--- zellij-autolock covers the other direction: while Neovim has focus Zellij
--- enters Locked mode, so a keystroke meant for the editor is never intercepted.
+-- It asks the focused pane what is running before it acts, so a keystroke meant
+-- for the editor is never intercepted — no auto-locking needed.
 
 return {
   {

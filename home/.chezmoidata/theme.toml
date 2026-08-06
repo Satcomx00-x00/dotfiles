@@ -53,7 +53,9 @@
     black        = "#15161e"
     terminal_black = "#414868"
 
-# ─── ANSI 16 — terminal emulators, fzf, eza, anything that speaks colour codes ─
+# ─── ANSI 16 — Zellij's theme block ──────────────────────────────────────────
+# The Tokyo Night sixteen. The terminal emulators used to read this too; they
+# now carry [theme.terminal] below, so this set is Zellij's alone.
 [theme.ansi]
     black          = "#15161e"
     red            = "#f7768e"
@@ -71,6 +73,60 @@
     bright_magenta = "#bb9af7"
     bright_cyan    = "#0db9d7"
     bright_white   = "#c0caf5"
+
+# ─── Terminal emulators: "xcad2k dark" ───────────────────────────────────────
+# Ghostty and Alacritty, and nothing else. A faithful transcription of
+# github.com/ChristianLempa/dotfiles/.warp/themes/xcad2k-dark.yml — the same
+# hexes, in the same slots.
+#
+# Read the slots below before changing anything: this palette maps the WHOLE
+# ANSI ring onto one blue→violet ramp. `red` is a purple, `green` is a violet,
+# `yellow` is a blue. That is the theme's entire idea — the terminal reads as
+# one hue instead of a traffic light — and the cost is that raw colour output
+# loses its meaning: a git diff, a failing test summary and `ls` all come out
+# in shades of violet. Anything that draws its own colours on top (Neovim,
+# Zellij, k9s, btop, the prompt) is unaffected and stays Tokyo Night, so the
+# monochrome only shows in plain command output.
+#
+# It is a self-contained palette for the same reason [theme.prompt] is: the two
+# emulators are the only consumers, so they own every colour they need here
+# rather than borrowing half of them from a palette with a different intent.
+#
+# Two values are DERIVED, because the Warp format has no key for either — Warp
+# paints both from its `accent`, and so do we:
+#   cursor        the accent, unmodified
+#   selection_bg  the accent at 30% over the background, what Warp renders
+# `fg_dim` is likewise ours: midway between fg and bright black.
+[theme.terminal]
+    bg           = "#191919"
+    fg           = "#f1f1f1"
+    fg_dim       = "#a8a8a8"
+    accent       = "#28b9ff"
+    cursor       = "#28b9ff"
+    cursor_text  = "#191919"
+    selection_bg = "#1e495e"
+    selection_fg = "#f1f1f1"
+
+# The sixteen, verbatim. bright_yellow is a desaturated slate rather than
+# anything on the ramp — that is upstream's value, kept rather than "fixed",
+# because a faithful copy is the point.
+[theme.terminal.ansi]
+    black          = "#121212"
+    red            = "#a52aff"
+    green          = "#7129ff"
+    yellow         = "#3d2aff"
+    blue           = "#2b4fff"
+    magenta        = "#2883ff"
+    cyan           = "#28b9ff"
+    white          = "#f1f1f1"
+    bright_black   = "#666666"
+    bright_red     = "#ba5aff"
+    bright_green   = "#905aff"
+    bright_yellow  = "#657b83"
+    bright_blue    = "#5c78ff"
+    bright_magenta = "#5ea2ff"
+    bright_cyan    = "#5ac8ff"
+    bright_white   = "#ffffff"
 
 # ─── Semantic roles ──────────────────────────────────────────────────────────
 # Consumers reference a role, not a colour. "What colour is a git addition"

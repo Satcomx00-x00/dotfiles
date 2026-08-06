@@ -1,6 +1,5 @@
-{{- $p := .theme.palette -}}
-{{- $a := .theme.ansi -}}
-{{- $u := .theme.ui -}}
+{{- $t := .theme.terminal -}}
+{{- $a := .theme.terminal.ansi -}}
 # ~/.config/ghostty/config — generated from .chezmoidata/theme.toml.
 #
 # Config only (report.md §7.14): Ghostty is a GUI application you install
@@ -16,12 +15,15 @@ font-feature = -liga
 adjust-cell-height = 12%
 
 # ─── Theme ───────────────────────────────────────────────────────────────────
-background = {{ $p.bg }}
-foreground = {{ $p.fg }}
-cursor-color = {{ $u.cursor }}
-cursor-text = {{ $u.cursor_text }}
-selection-background = {{ $u.selection_bg }}
-selection-foreground = {{ $u.selection_fg }}
+# xcad2k dark — [theme.terminal], NOT the Tokyo Night palette the rest of the
+# repo uses. Read the comment there before touching a slot: the ANSI ring is
+# deliberately one violet ramp, so `red` being a purple is intended.
+background = {{ $t.bg }}
+foreground = {{ $t.fg }}
+cursor-color = {{ $t.cursor }}
+cursor-text = {{ $t.cursor_text }}
+selection-background = {{ $t.selection_bg }}
+selection-foreground = {{ $t.selection_fg }}
 
 palette = 0={{ $a.black }}
 palette = 1={{ $a.red }}
@@ -55,7 +57,7 @@ window-inherit-working-directory = true
 # Neovim on a remote server land in the local clipboard.
 clipboard-read = allow
 clipboard-write = allow
-clipboard-trim-trailing-space = true
+clipboard-trim-trailing-spaces = true
 copy-on-select = clipboard
 
 scrollback-limit = 10000000

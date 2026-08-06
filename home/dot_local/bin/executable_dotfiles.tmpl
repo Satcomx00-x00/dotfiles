@@ -122,7 +122,7 @@ cmd_doctor() {
         fi
     done
 {{- if ge .tierRank 1 }}
-    for w in zjstatus vim-zellij-navigator zellij-autolock room; do
+    for w in zjstatus vim-zellij-navigator room; do
         if [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zellij/plugins/$w.wasm" ]; then
             ok "$w.wasm"
         else

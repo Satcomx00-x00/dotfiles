@@ -1,10 +1,10 @@
-{{- $p := .theme.palette -}}
-{{- $a := .theme.ansi -}}
-{{- $u := .theme.ui -}}
+{{- $t := .theme.terminal -}}
+{{- $a := .theme.terminal.ansi -}}
 # ~/.config/alacritty/alacritty.toml — generated from .chezmoidata/theme.toml.
 #
-# Secondary emulator (report.md §7.14); Ghostty is primary. Same palette, same
-# font, same OSC52 behaviour, so switching between them changes nothing visible.
+# Secondary emulator (report.md §7.14); Ghostty is primary. Same palette
+# ([theme.terminal], xcad2k dark), same font, same OSC52 behaviour, so
+# switching between them changes nothing visible.
 
 [general]
 live_config_reload = true
@@ -39,18 +39,18 @@ history = 100000
 multiplier = 3
 
 [colors.primary]
-background = "{{ $p.bg }}"
-foreground = "{{ $p.fg }}"
-dim_foreground = "{{ $p.fg_dark }}"
-bright_foreground = "{{ $p.fg }}"
+background = "{{ $t.bg }}"
+foreground = "{{ $t.fg }}"
+dim_foreground = "{{ $t.fg_dim }}"
+bright_foreground = "{{ $a.bright_white }}"
 
 [colors.cursor]
-text = "{{ $u.cursor_text }}"
-cursor = "{{ $u.cursor }}"
+text = "{{ $t.cursor_text }}"
+cursor = "{{ $t.cursor }}"
 
 [colors.selection]
-text = "{{ $u.selection_fg }}"
-background = "{{ $u.selection_bg }}"
+text = "{{ $t.selection_fg }}"
+background = "{{ $t.selection_bg }}"
 
 [colors.normal]
 black = "{{ $a.black }}"
