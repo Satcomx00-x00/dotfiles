@@ -81,9 +81,10 @@ hide_when_typing = true
 
 [terminal]
 # Decision #24 — OSC52 write access, so a remote yank reaches this machine's
-# clipboard. Alacritty refuses OSC52 READS by design, and so do we: see the
-# comment in nvim's clipboard provider.
-osc52 = "CopyPaste"
+# clipboard. Reads are refused (OnlyCopy, not CopyPaste): anything that prints
+# to the terminal could otherwise read the clipboard back. nvim's provider
+# never asks for one — see the comment there.
+osc52 = "OnlyCopy"
 
 [keyboard]
 bindings = [

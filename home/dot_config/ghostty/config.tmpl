@@ -53,9 +53,11 @@ confirm-close-surface = false
 window-inherit-working-directory = true
 
 # ─── Behaviour ───────────────────────────────────────────────────────────────
-# Decision #24: let OSC52 through. This is the setting that makes a yank inside
-# Neovim on a remote server land in the local clipboard.
-clipboard-read = allow
+# Decision #24: let OSC52 writes through. This is the setting that makes a yank
+# inside Neovim on a remote server land in the local clipboard. Reads are
+# denied: allowing them lets anything that prints to the terminal — a remote
+# host, a `cat` of a hostile file — read the clipboard back silently.
+clipboard-read = deny
 clipboard-write = allow
 clipboard-trim-trailing-spaces = true
 copy-on-select = clipboard
