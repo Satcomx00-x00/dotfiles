@@ -49,8 +49,20 @@ pane_frames true
 // Decision #24: leave the copy to the terminal via OSC52, so yanking on a
 // REMOTE server lands in the LOCAL clipboard, over the SSH connection itself.
 // Setting copy_command here would intercept that and break it.
+//
+// The exception is a workstation, where Zellij runs locally: there is no SSH
+// hop to carry OSC52, and VTE terminals (mate-terminal, gnome-terminal, xfce4)
+// drop it, so a mouse selection never reached the clipboard. Hand it straight
+// to the display server instead.
 copy_on_select true
 copy_clipboard "system"
+{{- if .fonts }}
+{{-   if lookPath "wl-copy" }}
+copy_command "wl-copy"
+{{-   else if lookPath "xclip" }}
+copy_command "xclip -selection clipboard"
+{{-   end }}
+{{- end }}
 scrollback_editor "{{ .identity.editor }}"
 scroll_buffer_size 20000
 mouse_mode true
