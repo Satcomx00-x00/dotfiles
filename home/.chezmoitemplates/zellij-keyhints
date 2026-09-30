@@ -1,8 +1,8 @@
 {{- /* Zellij's own `status-bar` plugin, pinned to the bottom of every tab.
 
-     zjstatus at the top carries the mode badge, tabs, host, session and clock;
-     this pair of rows is the stock key-hint table for the mode you are in. It
-     is the discoverability half of decision #42 — and because it ships with
+     The tab-bar at the top carries the session, mode and tabs; this pair of
+     rows is the stock key-hint table for the mode you are in. It is the
+     discoverability half of decision #42 — and because it ships with
      Zellij it is rendered from the live keybinding table, so unlike a
      hand-written hint string it cannot drift from the keys it describes.
 

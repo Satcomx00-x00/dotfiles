@@ -4,9 +4,9 @@
 -- split in that direction it hands off to Zellij, which moves to the next PANE.
 -- One muscle memory for both, and the seam is invisible.
 --
--- The Zellij half is vim-zellij-navigator, bound in ~/.config/zellij/config.kdl.
--- It asks the focused pane what is running before it acts, so a keystroke meant
--- for the editor is never intercepted — no auto-locking needed.
+-- The handoff is one-way: Zellij runs no navigator plugin, so from a non-editor
+-- pane you move with the stock Alt-h/j/k/l. Ctrl-h is also Zellij's stock Move
+-- mode, which takes the key before Neovim sees it.
 
 return {
   {

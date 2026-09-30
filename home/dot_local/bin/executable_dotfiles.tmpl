@@ -121,15 +121,6 @@ cmd_doctor() {
             rc=1
         fi
     done
-{{- if ge .tierRank 1 }}
-    for w in zjstatus vim-zellij-navigator room; do
-        if [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/zellij/plugins/$w.wasm" ]; then
-            ok "$w.wasm"
-        else
-            warn "$w.wasm missing — Zellij will start without it"
-        fi
-    done
-{{- end }}
 
     say "$c_bold" 'drift'
     if command -v chezmoi > /dev/null 2>&1; then

@@ -1,24 +1,20 @@
 {{- $p := .theme.palette -}}
 {{- $a := .theme.ansi -}}
-{{- $home := .chezmoi.homeDir -}}
 // ~/.config/zellij/config.kdl — generated from .chezmoidata/*.toml.
 //
 // Decision #42: the DEFAULT modal keybinding scheme, unmodified. Every Zellij
-// doc, issue and Stack Overflow answer then applies directly to this setup;
-// zjstatus names the active mode along the top and Zellij's own status-bar
-// plugin spells that mode's keys out along the bottom, at all times.
-// Only these are added, all of them absent upstream:
+// doc, issue and Stack Overflow answer then applies directly to this setup.
+// No third-party plugins: the layouts use Zellij's built-in tab-bar and
+// status-bar, and the stock session manager (Ctrl-o w) switches sessions, so
+// nothing has to be downloaded or kept in step with Zellij's plugin API.
+// Only these are added, both absent upstream:
 //
-//   Ctrl-h/j/k/l   unified pane/split navigation across the Neovim boundary
-//   Ctrl-o w       the `room` session and project switcher
 //   Alt-x, Alt-m   close / fullscreen the focused pane without entering pane
 //                  mode — completing the stock Alt layer (Alt-n new, Alt-f
 //                  floating, Alt-h/j/k/l focus are upstream defaults)
 //
 // The `zs` sessionizer (pickers.sh, Ctrl-f in the shell) creates per-project
 // sessions with the dev layout; it is shell-side, so nothing here binds it.
-//
-// Plugin paths are absolute because Zellij's `file:` scheme does not expand ~.
 
 theme "tokyonight"
 
@@ -40,11 +36,15 @@ themes {
 
 // ─── Behaviour ───────────────────────────────────────────────────────────────
 default_layout "default"
+// Re-flow panes into a predefined layout as available space changes (on a
+// terminal-window resize, or a split/close) instead of leaving gaps. This is
+// Zellij's own default, pinned here so a future upstream change cannot
+// silently alter how panes lay out on resize.
+auto_layout true
 default_mode "normal"
 // Frames draw the border and title around each pane, so a split tells you
-// which pane has focus without moving the cursor. Unconditionally — zjstatus
-// deliberately does NOT set `hide_frame_for_single_pane`, so an unsplit pane
-// is framed too and the viewport never resizes under you when you split.
+// which pane has focus without moving the cursor. An unsplit pane is framed
+// too, so the viewport never resizes under you when you split.
 pane_frames true
 // Decision #24: leave the copy to the terminal via OSC52, so yanking on a
 // REMOTE server lands in the LOCAL clipboard, over the SSH connection itself.
@@ -64,51 +64,13 @@ show_release_notes false
 // ─── Keybindings ─────────────────────────────────────────────────────────────
 // `keybinds` without `clear-defaults=true` LAYERS on top of the stock scheme,
 // which is the whole point of decision #42 — Ctrl-p/t/n/o/s/g keep their
-// upstream meanings and only the additions below are new.
+// upstream meanings and only the two additions below are new.
 keybinds {
     shared_except "locked" {
-        // Unified navigation. The plugin checks whether the focused pane is
-        // running Neovim; if so it forwards the key, otherwise it moves the
-        // Zellij pane. One muscle memory across both.
-        bind "Ctrl h" {
-            MessagePlugin "file:{{ $home }}/.local/share/zellij/plugins/vim-zellij-navigator.wasm" {
-                name "move_focus";
-                payload "left";
-            };
-        }
-        bind "Ctrl j" {
-            MessagePlugin "file:{{ $home }}/.local/share/zellij/plugins/vim-zellij-navigator.wasm" {
-                name "move_focus";
-                payload "down";
-            };
-        }
-        bind "Ctrl k" {
-            MessagePlugin "file:{{ $home }}/.local/share/zellij/plugins/vim-zellij-navigator.wasm" {
-                name "move_focus";
-                payload "up";
-            };
-        }
-        bind "Ctrl l" {
-            MessagePlugin "file:{{ $home }}/.local/share/zellij/plugins/vim-zellij-navigator.wasm" {
-                name "move_focus";
-                payload "right";
-            };
-        }
-
         // The stock Alt layer covers new pane (Alt-n), floating (Alt-f) and
         // focus (Alt-h/j/k/l, Alt-arrows). These two complete it, so the four
         // everyday pane actions never require entering pane mode.
         bind "Alt x" { CloseFocus; }
         bind "Alt m" { ToggleFocusFullscreen; }
-    }
-
-    session {
-        // `room`: fuzzy switch between sessions and project directories.
-        bind "w" {
-            LaunchOrFocusPlugin "file:{{ $home }}/.local/share/zellij/plugins/room.wasm" {
-                floating true
-            };
-            SwitchToMode "Normal";
-        }
     }
 }

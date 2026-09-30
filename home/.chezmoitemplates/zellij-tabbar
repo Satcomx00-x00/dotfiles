@@ -1,0 +1,7 @@
+{{- /* Zellij's own `tab-bar` plugin, pinned to the top of every tab: the
+     session name, the mode, and the tabs. Built in, so there is nothing to
+     download and nothing to break when Zellij is bumped. Included by every
+     layout before `children`, so the bar cannot differ between them. */ -}}
+        pane size=1 borderless=true {
+            plugin location="zellij:tab-bar"
+        }

@@ -97,7 +97,7 @@ by chezmoi and are the input to everything else.
 | Source | Consumers |
 | --- | --- |
 | `identity.toml` — who this repo belongs to | git config · SSH allowed-signers · `$EDITOR` in the shell · Zellij scrollback editor and dev layout · Claude settings |
-| `theme.toml` — Tokyo Night, once, as hex | starship palette · zellij theme · zjstatus format · bat · delta · `FZF_DEFAULT_OPTS` · `EZA_COLORS` · btop · k9s skin · ghostty · alacritty · tokyonight.nvim overrides · lualine |
+| `theme.toml` — Tokyo Night, once, as hex | starship palette · zellij theme · bat · delta · `FZF_DEFAULT_OPTS` · `EZA_COLORS` · btop · k9s skin · ghostty · alacritty · tokyonight.nvim overrides · lualine |
 | `tools.toml` — every tool, with tier and role | `mise/config.toml` · the mise install script's re-run hash · `dotfiles doctor` probe manifest · `dotfiles help` tool section · README inventory table · CI apply assertions |
 | `packages.toml` — base OS layer per distro | `run_once_before_00-install-packages` (already true today) |
 | `keys.toml` — Zellij and shell keybindings | `zellij/config.kdl` additions · `dotfiles help` multiplexer section |
