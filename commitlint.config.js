@@ -14,7 +14,7 @@ module.exports = {
       [
         "shell", "zsh", "bash", "prompt", "theme", "nvim", "zellij",
         "git", "ssh", "mise", "tools", "secrets", "ci", "docs",
-        "install", "portable", "test", "claude", "deps",
+        "install", "portable", "test", "claude", "deps", "windows",
       ],
     ],
   },

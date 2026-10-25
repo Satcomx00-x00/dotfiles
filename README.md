@@ -298,6 +298,7 @@ and fails on any diff, because a generation convention without a gate decays.
 - [docs/SECRETS.md](docs/SECRETS.md) — Bitwarden and Vaultwarden setup
 - [docs/CUSTOMIZING.md](docs/CUSTOMIZING.md) — adding a tool, alias, language or profile
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — known failures per distro
+- [docs/WINDOWS.md](docs/WINDOWS.md) — the `windows` branch: Alacritty + Zellij + pwsh
 
 ## Licence
 
