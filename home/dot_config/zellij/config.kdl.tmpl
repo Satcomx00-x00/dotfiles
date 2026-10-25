@@ -40,6 +40,9 @@ themes {
 default_shell "pwsh"
 // The layouts are the XDG ones; only this file lives under %APPDATA%.
 layout_dir {{ joinPath .chezmoi.homeDir ".config/zellij/layouts" | quote }}
+// Launched from Alacritty, Zellij inherits the shortcut's cwd (System32 from
+// the Start menu); start sessions in the home directory instead.
+default_cwd {{ .chezmoi.homeDir | quote }}
 {{- end }}
 default_layout "default"
 // Re-flow panes into a predefined layout as available space changes (on a
