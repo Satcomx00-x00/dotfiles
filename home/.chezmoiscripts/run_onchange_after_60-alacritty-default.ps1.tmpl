@@ -1,0 +1,34 @@
+{{- if .terminals -}}
+# Make Alacritty the terminal you reach for on Windows.
+#
+# Windows' "default terminal application" setting only accepts hosts that
+# implement the console delegation COM interface (Windows Terminal, conhost),
+# so Alacritty cannot take that slot. This wires up the two entry points that
+# remain: Explorer's context menu, and a Ctrl+Alt+T Start-menu shortcut.
+
+$ErrorActionPreference = 'Stop'
+$exe = Join-Path $env:ProgramFiles 'Alacritty\alacritty.exe'
+if (-not (Test-Path $exe)) {
+    Write-Host '  alacritty: not installed — `winget install Alacritty.Alacritty`, then re-apply'
+    exit 0
+}
+
+# Explorer: "Open in Alacritty" on folders, folder backgrounds and drives.
+foreach ($k in 'Directory\Background\shell\alacritty', 'Directory\shell\alacritty', 'Drive\shell\alacritty') {
+    $p = "HKCU:\Software\Classes\$k"
+    New-Item "$p\command" -Force | Out-Null
+    Set-ItemProperty $p '(default)' 'Ouvrir dans Alacritty'
+    Set-ItemProperty $p 'Icon' $exe
+    $arg = if ($k -like 'Directory\Background*') { '%V' } else { '%1' }
+    Set-ItemProperty "$p\command" '(default)' "`"$exe`" --working-directory `"$arg`""
+}
+
+# Start menu shortcut carrying the global hotkey.
+$lnk = (New-Object -ComObject WScript.Shell).CreateShortcut(
+    (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Alacritty (zellij).lnk'))
+$lnk.TargetPath       = $exe
+$lnk.WorkingDirectory = $HOME
+$lnk.Hotkey           = 'CTRL+ALT+T'
+$lnk.IconLocation     = "$exe,0"
+$lnk.Save()
+{{- end }}

@@ -1,0 +1,31 @@
+{{- if .fonts -}}
+# Windows counterpart of the JetBrainsMono external in .chezmoiexternal.toml:
+# a per-user install (no admin), the same release and the same four faces.
+#
+# version: v3.4.0
+
+$ErrorActionPreference = 'Stop'
+$faces = 'Regular', 'Bold', 'Italic', 'BoldItalic'
+$dir   = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
+$reg   = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
+
+$missing = $faces | Where-Object { -not (Test-Path (Join-Path $dir "JetBrainsMonoNerdFont-$_.ttf")) }
+if (-not $missing) { exit 0 }
+
+Write-Host '  fonts: installing JetBrainsMono Nerd Font'
+$tmp = Join-Path ([IO.Path]::GetTempPath()) "jbmono-$([guid]::NewGuid())"
+New-Item -ItemType Directory -Force $tmp, $dir | Out-Null
+try {
+    $zip = Join-Path $tmp 'JetBrainsMono.zip'
+    Invoke-WebRequest 'https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/JetBrainsMono.zip' -OutFile $zip
+    Expand-Archive $zip -DestinationPath $tmp
+    foreach ($f in $faces) {
+        $name = "JetBrainsMonoNerdFont-$f.ttf"
+        Copy-Item (Join-Path $tmp $name) (Join-Path $dir $name) -Force
+        $label = ($f -creplace '(?<=.)([A-Z])', ' $1')
+        Set-ItemProperty $reg "JetBrainsMono Nerd Font $label (TrueType)" (Join-Path $dir $name)
+    }
+} finally {
+    Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
+}
+{{- end }}

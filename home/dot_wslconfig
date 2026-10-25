@@ -1,0 +1,11 @@
+[wsl2]
+# VM shuts down after 5 min with no running distro (was -1 = never)
+vmIdleTimeout=300000
+
+[general]
+# distro stops after 60 s without processes (was -1 = never)
+instanceIdleTimeout=60000
+
+[experimental]
+# give unused Linux page cache back to Windows progressively
+autoMemoryReclaim=gradual

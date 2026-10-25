@@ -1,0 +1,25 @@
+# Windows counterpart of run_onchange_after_20-mise-install.sh.
+#
+# windows.toml: {{ include ".chezmoidata/windows.toml" | sha256sum }}
+#
+# A failure warns rather than aborting, as on Linux: a machine with a working
+# shell and three missing tools beats an apply that died halfway.
+
+$ErrorActionPreference = 'Continue'
+function log($m) { Write-Host "  tools: $m" }
+
+if (-not (Get-Command mise -ErrorAction SilentlyContinue)) {
+    log 'WARN mise not found — install it with `winget install jdx.mise`'
+    exit 0
+}
+if ($env:DOTFILES_SKIP_MISE_TOOLS -eq '1') { log 'skipped (DOTFILES_SKIP_MISE_TOOLS=1)'; exit 0 }
+
+log 'installing the Windows tool list'
+mise install --yes
+if ($LASTEXITCODE -ne 0) {
+    log 'some tools failed — second pass'
+    mise install --yes
+    if ($LASTEXITCODE -ne 0) { log 'WARN some tools failed to install — run `mise install` to see which' }
+}
+mise reshim *> $null
+exit 0
