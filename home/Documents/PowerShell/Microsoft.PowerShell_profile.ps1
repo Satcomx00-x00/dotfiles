@@ -12,14 +12,14 @@ $env:BAT_CONFIG_PATH     = "$HOME\.config\bat\config"
 $env:RIPGREP_CONFIG_PATH = "$HOME\.config\ripgrep\config"
 $env:K9S_CONFIG_DIR      = "$HOME\.config\k9s"
 
-# Prompt
-if (Get-Command starship -ErrorAction SilentlyContinue) { Invoke-Expression (&starship init powershell) }
-
-# mise: put managed tools on PATH
+# mise: put managed tools on PATH — first, since it provides starship & co.
 if (Get-Command mise -ErrorAction SilentlyContinue) {
     $env:MISE_PWSH_CHPWD_WARNING = 0
     mise activate pwsh | Out-String | Invoke-Expression
 }
+
+# Prompt
+if (Get-Command starship -ErrorAction SilentlyContinue) { Invoke-Expression (&starship init powershell) }
 
 # PSReadLine: history-based predictions, shown as a list (F2 toggles inline/list)
 if ((Get-Module -ListAvailable PSReadLine) -and -not [Console]::IsOutputRedirected) {
