@@ -30,6 +30,8 @@ desktop.ini
 .direnv/
 .envrc.local
 .tool-versions.local
+# Claude Code's per-checkout overrides (the shared settings.json is committed).
+.claude/settings.local.json
 
 # ── Secrets — belt and braces alongside gitleaks (decision #19) ───────────────
 .env

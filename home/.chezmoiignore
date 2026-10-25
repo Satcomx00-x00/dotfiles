@@ -17,6 +17,7 @@
 {{- if not .terminals }}
 .config/ghostty
 .config/alacritty
+AppData/Roaming/alacritty
 {{- end }}
 
 # ─── SSH commit signing allow-list: only when signing is on ──────────────────
@@ -35,6 +36,7 @@
 {{- if lt .tierRank 1 }}
 .config/nvim
 .config/zellij
+AppData/Roaming/Zellij
 {{- end }}
 
 # ─── full tier only ──────────────────────────────────────────────────────────
@@ -42,9 +44,43 @@
 .config/k9s
 {{- end }}
 
+# ─── Windows: the POSIX shell stack has nothing to run on ────────────────────
+# Windows reads its own paths (AppData, Documents\PowerShell); the XDG copies of
+# alacritty and zellij are re-emitted there by thin wrappers that include them
+# (Zellij reads its layouts from ~/.config/zellij/layouts via layout_dir).
+# ~/.ssh and ~/.claude stay hand-managed: Windows OpenSSH has no ControlMaster,
+# and the Claude config there is per-machine.
+{{- if eq .chezmoi.os "windows" }}
+.bash_profile
+.bashrc
+.profile
+.zprofile
+.zshenv
+.zshrc
+.config/alacritty
+.config/btop
+.config/ghostty
+.config/nvim
+.config/shell
+.config/zellij/config.kdl
+.local
+.local/**
+.ssh
+.claude
+.chezmoiscripts/*.sh
+{{- else }}
+AppData
+Documents
+.wslconfig
+.config/powershell
+.config/yasb
+.chezmoiscripts/*.ps1
+{{- end }}
+
 # ─── Never managed, ever ─────────────────────────────────────────────────────
 # Listed for the reader's benefit and as a guard against a future commit
 # accidentally adding them to the source tree. Decision #30: these are the
 # files that would turn a public repo into a map of your estate.
 .config/shell/local.sh
+.config/powershell/local.ps1
 .ssh/config.d

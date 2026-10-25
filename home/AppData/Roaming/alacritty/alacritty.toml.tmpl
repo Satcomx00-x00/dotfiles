@@ -1,0 +1,3 @@
+{{- /* Alacritty on Windows reads only %APPDATA%\alacritty — same config as the
+     XDG one, whose template carries the Windows differences. */ -}}
+{{ includeTemplate "dot_config/alacritty/alacritty.toml.tmpl" . }}

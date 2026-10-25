@@ -1,0 +1,3 @@
+{{- /* Zellij on Windows reads %APPDATA%\Zellij\config — same config as the XDG
+     one, whose template carries the Windows differences. */ -}}
+{{ includeTemplate "dot_config/zellij/config.kdl.tmpl" . }}

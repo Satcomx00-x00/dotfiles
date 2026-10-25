@@ -34,7 +34,8 @@
 {{- $defaultProfile := "workstation" -}}
 {{- if or (env "CODESPACES") (env "REMOTE_CONTAINERS") (stat "/.dockerenv") (stat "/run/.containerenv") -}}
 {{-   $defaultProfile = "container" -}}
-{{- else if not (env "DISPLAY") -}}
+{{- /* Windows has no DISPLAY: a desktop session is the only kind it runs. */ -}}
+{{- else if and (ne .chezmoi.os "windows") (not (env "DISPLAY")) -}}
 {{-   $defaultProfile = "server" -}}
 {{- end -}}
 {{- $profile := promptChoiceOnce . "profile" "Machine profile" (list "workstation" "server" "container") $defaultProfile -}}
@@ -94,6 +95,14 @@
 [git]
     autoCommit = false
     autoPush   = false
+
+{{- if eq .chezmoi.os "windows" }}
+
+[interpreters.ps1]
+    # chezmoi's default is Windows PowerShell 5.1; the scripts target pwsh 7.
+    command = "pwsh"
+    args    = ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass"]
+{{- end }}
 
 {{- if eq $secretsBackend "bitwarden" }}
 

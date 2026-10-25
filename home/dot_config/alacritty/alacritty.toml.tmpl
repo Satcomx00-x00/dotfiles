@@ -10,7 +10,18 @@
 live_config_reload = true
 
 [env]
+{{- if eq .chezmoi.os "windows" }}
+# ConPTY has no terminfo database to hold an `alacritty` entry.
+TERM = "xterm-256color"
+
+# Windows has no login shell to auto-attach Zellij (decision #13), so the
+# emulator starts it; Zellij then runs pwsh (default_shell in config.kdl).
+# The mise shim keeps the path valid across Zellij upgrades.
+[terminal.shell]
+program = '{{ joinPath .chezmoi.homeDir "AppData/Local/mise/shims/zellij.exe" | replace "/" "\\" }}'
+{{- else }}
 TERM = "alacritty"
+{{- end }}
 
 [font]
 size = 13.0

@@ -13,6 +13,10 @@
 #
 # test/verify-externals.sh checks every URL here is still reachable.
 
+{{- /* None of this has a consumer on Windows: no zsh, and fonts install per
+     user through run_onchange_after_30-fonts.ps1. */}}
+{{- if ne .chezmoi.os "windows" }}
+
 # ─── zsh-defer: the whole reason this setup has no plugin manager ─────────────
 # Queues a command to run after the first prompt is drawn. The startup cost of a
 # deferred plugin is ~0, so we get framework features at no framework price.
@@ -79,4 +83,5 @@
         "JetBrainsMonoNerdFont-Italic.ttf",
         "JetBrainsMonoNerdFont-BoldItalic.ttf",
     ]
+{{- end }}
 {{- end }}

@@ -11,10 +11,20 @@
   through it is cryptographically verified at install time for free.
 */ -}}
 {{- $wsl := or (env "WSL_DISTRO_NAME") (stat "/run/WSL") (stat "/proc/sys/fs/binfmt_misc/WSLInterop") -}}
-# Generated from .chezmoidata/tools.toml — do not edit.
+# Generated from .chezmoidata/{{ if eq .chezmoi.os "windows" }}windows{{ else }}tools{{ end }}.toml — do not edit.
 # Tier: {{ .tier }} (rank {{ .tierRank }})
 
 [tools]
+{{- if eq .chezmoi.os "windows" }}
+{{- /* .chezmoidata/windows.toml — see the note there on why it is separate. */}}
+{{- range .windows.tools }}
+{{- if hasKey . "allowBuilds" }}
+"{{ .backend }}" = { version = "{{ .version }}", allow_builds = [{{ range $i, $b := .allowBuilds }}{{ if $i }}, {{ end }}"{{ $b }}"{{ end }}] }
+{{- else }}
+"{{ .backend }}" = "{{ .version }}"
+{{- end }}
+{{- end }}
+{{- else }}
 {{- range .tools.list }}
 {{- /* hasKey, not `.when` or `default "" .when`: chezmoi runs templates with
        missingkey=error, so touching an absent optional field is a hard failure
@@ -27,6 +37,7 @@
 {{ .name }} = "{{ .version }}"{{ if $pin }}  # PIN: {{ $pin }}{{ end }}
 {{- else }}
 "{{ .backend }}" = "{{ .version }}"{{ if $pin }}  # PIN: {{ $pin }}{{ end }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

@@ -1,0 +1,37 @@
+# Windows tool list — consumed by dot_config/mise/config.toml.tmpl in place of
+# tools.toml when .chezmoi.os is "windows".
+#
+# Separate rather than a `when` flag on tools.toml entries: most of that list is
+# POSIX tooling (shellcheck, btop, the zsh stack, language servers for nvim)
+# with no Windows build or no Windows consumer, so the overlap is small and a
+# second list reads more plainly than seventy exclusions.
+#
+# Fields:
+#   backend      mise tool spec, written verbatim as the key
+#   version      version or "latest"
+#   allowBuilds  optional — mise's allow_builds for npm-backed tools
+
+[windows]
+    tools = [
+        # The bootstrap itself.
+        { backend = "chezmoi",                  version = "latest" },
+        # Required by the managed configs: git's pager, Zellij's scrollback
+        # editor and dev layout, and the two tools with an XDG config here.
+        { backend = "delta",                    version = "latest" },
+        { backend = "neovim",                   version = "latest" },
+        { backend = "lazygit",                  version = "latest" },
+        { backend = "bat",                      version = "latest" },
+        { backend = "ripgrep",                  version = "latest" },
+        { backend = "zellij",                   version = "latest" },
+        # Everyday tooling on this machine.
+        { backend = "claude",                   version = "latest" },
+        { backend = "opencode",                 version = "latest", allowBuilds = ["@opencode/cli"] },
+        { backend = "github:netbirdio/netbird", version = "latest" },
+        { backend = "kubectl",                  version = "latest" },
+        { backend = "kubectx",                  version = "latest" },
+        { backend = "kubens",                   version = "latest" },
+        { backend = "talosctl",                 version = "latest" },
+        { backend = "terraform",                version = "1.17.0" },
+        { backend = "rust",                     version = "latest" },
+        { backend = "pipx:huggingface_hub",     version = "latest" },
+    ]

@@ -35,6 +35,12 @@ themes {
 }
 
 // ─── Behaviour ───────────────────────────────────────────────────────────────
+{{- if eq .chezmoi.os "windows" }}
+// Without it Zellij falls back to cmd.exe.
+default_shell "pwsh"
+// The layouts are the XDG ones; only this file lives under %APPDATA%.
+layout_dir {{ joinPath .chezmoi.homeDir ".config/zellij/layouts" | quote }}
+{{- end }}
 default_layout "default"
 // Re-flow panes into a predefined layout as available space changes (on a
 // terminal-window resize, or a split/close) instead of leaving gaps. This is
