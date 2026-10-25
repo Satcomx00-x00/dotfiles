@@ -1,37 +1,52 @@
-# Windows tool list — consumed by dot_config/mise/config.toml.tmpl in place of
-# tools.toml when .chezmoi.os is "windows".
+# Windows tool selection — consumed by dot_config/mise/config.toml.tmpl when
+# .chezmoi.os is "windows".
 #
-# Separate rather than a `when` flag on tools.toml entries: most of that list is
-# POSIX tooling (shellcheck, btop, the zsh stack, language servers for nvim)
-# with no Windows build or no Windows consumer, so the overlap is small and a
-# second list reads more plainly than seventy exclusions.
+# Two parts:
 #
-# Fields:
-#   backend      mise tool spec, written verbatim as the key
-#   version      version or "latest"
-#   allowBuilds  optional — mise's allow_builds for npm-backed tools
+#   fromTools  NAMES from tools.toml. Backend, version and pin come from there,
+#              so a favourite is defined once for every OS (decision #47's aqua
+#              verification included). The template fails on an unknown name.
+#   extra      Windows-only tools, or a Windows-specific version of one.
+#
+# Not every tools.toml entry is here: some have no Windows build (btop, fclones,
+# git-lfs ships with Git for Windows), some have no Windows consumer (direnv has
+# no pwsh hook; the language servers serve the nvim config, which Windows does
+# not deploy), and win32yank is the WSL side of the clipboard bridge.
 
 [windows]
-    tools = [
-        # The bootstrap itself.
-        { backend = "chezmoi",                  version = "latest" },
-        # Required by the managed configs: git's pager, Zellij's scrollback
-        # editor and dev layout, and the two tools with an XDG config here.
-        { backend = "delta",                    version = "latest" },
-        { backend = "neovim",                   version = "latest" },
-        { backend = "lazygit",                  version = "latest" },
-        { backend = "bat",                      version = "latest" },
-        { backend = "ripgrep",                  version = "latest" },
-        { backend = "zellij",                   version = "latest" },
-        # Everyday tooling on this machine.
+    fromTools = [
+        # ── Bootstrap and prompt ──
+        "chezmoi", "starship",
+        # ── Core CLI ──
+        "eza", "bat", "fd", "ripgrep", "fzf", "zoxide", "jq", "yq", "delta", "sd",
+        # ── System ──
+        "hyperfine", "dust", "duf",
+        # ── Git ──
+        "lazygit", "gh", "gitleaks",
+        # ── Editor ──
+        "neovim",
+        # ── Languages ──
+        "node", "bun", "python", "uv", "go", "rust",
+        # ── Linters ──
+        "shellcheck", "shfmt", "ruff", "biome",
+        # ── Containers and Kubernetes ──
+        "lazydocker", "trivy", "kubectl", "k9s", "helm", "kubectx", "kubens", "kustomize", "stern",
+        # ── Infrastructure ──
+        "opentofu",
+        # ── Secrets and tasks ──
+        "bitwarden-cli", "age", "sops", "just",
+    ]
+
+    # Fields: backend (mise tool spec, written verbatim), version, and optional
+    # pin (why the version is frozen) and allowBuilds (npm build-script allowlist).
+    extra = [
+        # Not "zellij" from tools.toml: its 0.44.3 pin is the Linux floor, and
+        # the Windows setup (Alacritty -> Zellij -> pwsh) was tested on 0.45.1.
+        { backend = "zellij",                   version = "0.45.1", pin = "the version the Windows Alacritty/Zellij/pwsh chain was tested with" },
+        { backend = "terraform",                version = "1.17.0", pin = "carried over from the hand-written Windows config; reason not recorded" },
+        { backend = "talosctl",                 version = "latest" },
+        { backend = "github:netbirdio/netbird", version = "latest" },
         { backend = "claude",                   version = "latest" },
         { backend = "opencode",                 version = "latest", allowBuilds = ["@opencode/cli"] },
-        { backend = "github:netbirdio/netbird", version = "latest" },
-        { backend = "kubectl",                  version = "latest" },
-        { backend = "kubectx",                  version = "latest" },
-        { backend = "kubens",                   version = "latest" },
-        { backend = "talosctl",                 version = "latest" },
-        { backend = "terraform",                version = "1.17.0" },
-        { backend = "rust",                     version = "latest" },
         { backend = "pipx:huggingface_hub",     version = "latest" },
     ]

@@ -6,7 +6,7 @@ palette, font and keybindings of the Linux setup.
 
 ## Install
 
-Prerequisites (once): `winget install jdx.mise Alacritty.Alacritty Microsoft.PowerShell Starship.Starship`
+Prerequisites (once): `winget install jdx.mise Alacritty.Alacritty Microsoft.PowerShell` — starship and the rest come from mise
 
 ```powershell
 mise use -g chezmoi
@@ -25,7 +25,7 @@ chezmoi init --apply --branch windows Satcomx00-x00
 | `dot_config/zellij/layouts/`                   | `~\.config\zellij\layouts`, via `layout_dir`         |
 | `Documents/PowerShell/…profile.ps1`            | pwsh 7 profile                                      |
 | `Documents/WindowsPowerShell/…profile.ps1`     | Windows PowerShell 5.1 profile                      |
-| `dot_config/mise/config.toml.tmpl`             | rendered from `.chezmoidata/windows.toml`, not `tools.toml` |
+| `dot_config/mise/config.toml.tmpl`             | `tools.toml` entries named in `.chezmoidata/windows.toml` (`fromTools`), plus its Windows-only `extra` |
 | `dot_config/yasb/`                             | yasb status bar                                     |
 | `dot_wslconfig`                                | `~\.wslconfig`                                      |
 | git, starship, bat, ripgrep, k9s               | the usual `~\.config` paths (the profile sets `BAT_CONFIG_PATH`, `RIPGREP_CONFIG_PATH`, `K9S_CONFIG_DIR`) |

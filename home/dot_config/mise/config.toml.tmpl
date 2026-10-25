@@ -11,26 +11,29 @@
   through it is cryptographically verified at install time for free.
 */ -}}
 {{- $wsl := or (env "WSL_DISTRO_NAME") (stat "/run/WSL") (stat "/proc/sys/fs/binfmt_misc/WSLInterop") -}}
-# Generated from .chezmoidata/{{ if eq .chezmoi.os "windows" }}windows{{ else }}tools{{ end }}.toml — do not edit.
+# Generated from .chezmoidata/tools.toml{{ if eq .chezmoi.os "windows" }} + windows.toml{{ end }} — do not edit.
 # Tier: {{ .tier }} (rank {{ .tierRank }})
 
 [tools]
-{{- if eq .chezmoi.os "windows" }}
-{{- /* .chezmoidata/windows.toml — see the note there on why it is separate. */}}
-{{- range .windows.tools }}
-{{- if hasKey . "allowBuilds" }}
-"{{ .backend }}" = { version = "{{ .version }}", allow_builds = [{{ range $i, $b := .allowBuilds }}{{ if $i }}, {{ end }}"{{ $b }}"{{ end }}] }
-{{- else }}
-"{{ .backend }}" = "{{ .version }}"
+{{- $windows := eq .chezmoi.os "windows" }}
+{{- if $windows }}
+{{- /* .chezmoidata/windows.toml selects tools.toml entries by name. A typo
+       there would silently drop a tool, so an unknown name fails the apply. */}}
+{{- $names := list }}
+{{- range .tools.list }}{{ $names = append $names .name }}{{ end }}
+{{- range .windows.fromTools }}
+{{- if not (has . $names) }}{{ fail (printf "windows.toml: %q is not a tools.toml name" .) }}{{ end }}
 {{- end }}
 {{- end }}
-{{- else }}
 {{- range .tools.list }}
 {{- /* hasKey, not `.when` or `default "" .when`: chezmoi runs templates with
        missingkey=error, so touching an absent optional field is a hard failure
        rather than an empty value. Every optional field is read this way. */}}
 {{- $skip := and (hasKey . "when") (and (eq (dig "when" "" .) "wsl") (not $wsl)) }}
-{{- if and (le .rank $.tierRank) (not $skip) }}
+{{- $want := and (le .rank $.tierRank) (not $skip) }}
+{{- /* Windows ignores the tier: windows.toml is already the selection. */}}
+{{- if $windows }}{{ $want = has .name $.windows.fromTools }}{{ end }}
+{{- if $want }}
 {{- $pin := dig "pin" "" . }}
 {{- /* core: tools are mise's own built-in plugins and take a bare name. */}}
 {{- if hasPrefix "core:" .backend }}
@@ -38,6 +41,15 @@
 {{- else }}
 "{{ .backend }}" = "{{ .version }}"{{ if $pin }}  # PIN: {{ $pin }}{{ end }}
 {{- end }}
+{{- end }}
+{{- end }}
+{{- if $windows }}
+{{- range .windows.extra }}
+{{- $pin := dig "pin" "" . }}
+{{- if hasKey . "allowBuilds" }}
+"{{ .backend }}" = { version = "{{ .version }}", allow_builds = [{{ range $i, $b := .allowBuilds }}{{ if $i }}, {{ end }}"{{ $b }}"{{ end }}] }{{ if $pin }}  # PIN: {{ $pin }}{{ end }}
+{{- else }}
+"{{ .backend }}" = "{{ .version }}"{{ if $pin }}  # PIN: {{ $pin }}{{ end }}
 {{- end }}
 {{- end }}
 {{- end }}
