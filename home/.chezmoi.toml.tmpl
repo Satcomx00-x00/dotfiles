@@ -72,9 +72,10 @@
     fonts      = {{ $isWorkstation }}
     # Ghostty/Alacritty are GUI apps: their config is meaningless elsewhere.
     terminals  = {{ $isWorkstation }}
-    # Zellij auto-attach on login — never in a container, which is already a
-    # single-purpose session and would nest.
-    autoAttach = {{ not $isContainer }}
+    # Zellij auto-attach on login — disabled everywhere: a login shell starts
+    # plain, and `zs` / Ctrl-f opens a session on demand. Set back to
+    # `{{ not $isContainer }}` to restore it (never in a container: it nests).
+    autoAttach = false
     # The image sets the shell in a container; chsh there is a no-op at best.
     chsh       = {{ not $isContainer }}
     # A staleness hint on an ephemeral host is noise about a machine that will

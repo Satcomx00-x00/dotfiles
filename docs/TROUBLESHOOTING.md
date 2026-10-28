@@ -70,11 +70,14 @@ path is **not** proven in CI — report.md §14 accepts that.
 
 ## Zellij starts when I do not want it
 
+Login auto-attach is off by default (`autoAttach = false` in
+`home/.chezmoi.toml.tmpl`). If you re-enabled it and want to skip it once:
+
 ```sh
 ZELLIJ_SKIP=1 ssh host
 ```
 
-Auto-attach is already disabled when nested, in containers, without a TTY, under
+When enabled, auto-attach is still skipped when nested, in containers, without a TTY, under
 VS Code, and for non-interactive invocations — so `scp`, `rsync` and
 `ssh host command` are unaffected. If it fires when it should not, that is a bug
 in the guard list in `~/.zshrc`.
