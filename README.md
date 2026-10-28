@@ -71,7 +71,6 @@ independent, so a small VPS can be a `server` on `minimal`.
 | --- | --- | --- | --- |
 | Nerd Font | yes | no | no |
 | Terminal emulator config | yes | no | no |
-| Zellij auto-attach | no | no | no |
 | Change login shell | yes | yes | no (image sets it) |
 | Default tier | `full` | `standard` | `standard` |
 | Node heap | 8 GB | 2 GB | 2 GB |

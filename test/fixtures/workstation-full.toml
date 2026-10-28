@@ -23,7 +23,6 @@
     # ── Derived once at init, never re-derived in a consumer (§3.2) ──────────
     fonts          = true
     terminals      = true
-    autoAttach     = true
     chsh           = true
     staleness      = true
     nodeHeapMB     = 8192

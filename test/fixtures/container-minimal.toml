@@ -17,7 +17,6 @@
 
     fonts          = false
     terminals      = false
-    autoAttach     = false
     chsh           = false
     staleness      = false
     nodeHeapMB     = 2048

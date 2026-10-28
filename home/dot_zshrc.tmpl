@@ -4,12 +4,10 @@
 #
 # The shape of this file is the whole performance argument. In order:
 #   1. Bail out immediately if not interactive.
-#   2. Hand off to Zellij before doing ANY work — if we exec, everything below
-#      would have been wasted.
-#   3. Cheap builtins only: history, options, keybindings.
-#   4. compinit, with a cache rebuilt at most daily.
-#   5. The shared bash/zsh layer.
-#   6. Plugins, every one of them deferred past the first prompt.
+#   2. Cheap builtins only: history, options, keybindings.
+#   3. compinit, with a cache rebuilt at most daily.
+#   4. The shared bash/zsh layer.
+#   5. Plugins, every one of them deferred past the first prompt.
 #
 # Decision #25: nothing is printed at login. The prompt appears instantly.
 
@@ -19,41 +17,7 @@ case $- in
     *) return ;;
 esac
 
-{{- if .autoAttach }}
-
-# ─── 2. Zellij auto-attach (decision #13) ────────────────────────────────────
-# Reattach to the LAST session you were in — written here and by the `zs`
-# sessionizer (pickers.sh) — falling back to a session named after this host.
-# `attach --create` resurrects a dead session or creates a fresh one, so a
-# dropped SSH connection or a reboot costs nothing.
-#
-# Every guard here matters. Without them this line breaks scp, rsync, remote
-# `ssh host command`, VS Code's server, and any nested shell — all of which are
-# "interactive enough" to reach this file but must never get a multiplexer.
-if [[ -z "$ZELLIJ" ]] &&
-    [[ -z "$ZELLIJ_SKIP" ]] &&
-    [[ -t 0 && -t 1 ]] &&
-    [[ -z "$VSCODE_INJECTION" ]] &&
-    [[ "$TERM" != "dumb" ]] &&
-    command -v zellij >/dev/null 2>&1; then
-    # The forks below run only on this path, where an exec follows anyway.
-    _zj_state="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
-    _zj_session="${HOST%%.*}"
-    if [[ -r "$_zj_state/last-session" ]]; then
-        _zj_last="$(<"$_zj_state/last-session")"
-        # Only honour the state file if that session still exists (live or
-        # serialised); otherwise the host session is the home base.
-        if [[ -n "$_zj_last" ]] && zellij list-sessions -s 2>/dev/null | grep -qx -- "$_zj_last"; then
-            _zj_session="$_zj_last"
-        fi
-    fi
-    mkdir -p "$_zj_state" 2>/dev/null &&
-        printf '%s\n' "$_zj_session" >| "$_zj_state/last-session" 2>/dev/null
-    ZELLIJ_AUTO_EXIT=true exec zellij attach --create "$_zj_session"
-fi
-{{- end }}
-
-# ─── 3. History ──────────────────────────────────────────────────────────────
+# ─── 2. History ──────────────────────────────────────────────────────────────
 # Decision #7: a plain history file plus fzf. No daemon, no sync server, no
 # database to corrupt on a box you cannot reach.
 HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
@@ -71,7 +35,7 @@ setopt HIST_REDUCE_BLANKS
 setopt HIST_VERIFY             # expand !! for review, do not run it blind
 setopt HIST_IGNORE_SPACE       # a leading space keeps a command out of history
 
-# ─── 4. Shell options ────────────────────────────────────────────────────────
+# ─── 3. Shell options ────────────────────────────────────────────────────────
 setopt AUTO_CD                 # `..` and bare directory names work as cd
 setopt AUTO_PUSHD              # every cd pushes onto the directory stack
 setopt PUSHD_IGNORE_DUPS
@@ -85,7 +49,7 @@ setopt NO_FLOW_CONTROL         # frees Ctrl-s for fzf and search
 setopt LONG_LIST_JOBS
 setopt NOTIFY
 
-# ─── 5. Keybindings — emacs (decision #31) ───────────────────────────────────
+# ─── 4. Keybindings — emacs (decision #31) ───────────────────────────────────
 # Ctrl-a/e/w/u/k/r behave identically here, on a stock server, in bash, and in
 # every REPL on earth. Modal editing stays inside Neovim, where it belongs.
 bindkey -e
@@ -98,7 +62,7 @@ bindkey '^[[H'    beginning-of-line
 bindkey '^[[F'    end-of-line
 bindkey '^[[Z'    reverse-menu-complete  # Shift-Tab
 
-# ─── 6. Completion ───────────────────────────────────────────────────────────
+# ─── 5. Completion ───────────────────────────────────────────────────────────
 # zsh-completions ships extra definitions; it must join fpath BEFORE compinit,
 # which is why this one plugin cannot be deferred.
 fpath=("${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins/zsh-completions/src" $fpath)
@@ -132,7 +96,7 @@ zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'eza -1 --icons=auto --color
 zstyle ':fzf-tab:complete:*:*'       fzf-preview '[[ -f $realpath ]] && (bat --color=always --line-range=:100 $realpath 2>/dev/null || head -100 $realpath)'
 zstyle ':fzf-tab:*' switch-group ',' '.'
 
-# ─── 7. Shared layer (bash/zsh parity) ───────────────────────────────────────
+# ─── 6. Shared layer (bash/zsh parity) ───────────────────────────────────────
 _dotfiles_shell_dir="${XDG_CONFIG_HOME:-$HOME/.config}/shell"
 for _f in aliases functions pickers interactive secrets; do
     [[ -r "$_dotfiles_shell_dir/$_f.sh" ]] && source "$_dotfiles_shell_dir/$_f.sh"
@@ -155,7 +119,7 @@ _dotfiles_zs_widget() {
 zle -N _dotfiles_zs_widget
 bindkey '^F' _dotfiles_zs_widget
 
-# ─── 8. Plugins, all deferred (decision #2) ──────────────────────────────────
+# ─── 7. Plugins, all deferred (decision #2) ──────────────────────────────────
 # zsh-defer queues a command to run after the first prompt is drawn, so the
 # startup cost of everything below is approximately zero. The trade-off is real
 # and accepted (report.md §16): the first ~100 ms of a shell has no syntax

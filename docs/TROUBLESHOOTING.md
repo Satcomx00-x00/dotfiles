@@ -70,24 +70,9 @@ path is **not** proven in CI — report.md §14 accepts that.
 
 ## Zellij starts when I do not want it
 
-Login auto-attach is off by default (`autoAttach = false` in
-`home/.chezmoi.toml.tmpl`). If you re-enabled it and want to skip it once:
-
-```sh
-ZELLIJ_SKIP=1 ssh host
-```
-
-When enabled, auto-attach is still skipped when nested, in containers, without a TTY, under
-VS Code, and for non-interactive invocations — so `scp`, `rsync` and
-`ssh host command` are unaffected. If it fires when it should not, that is a bug
-in the guard list in `~/.zshrc`.
-
-## Login attached to the wrong Zellij session
-
-Auto-attach reattaches the last session you were in, remembered in
-`~/.local/state/dotfiles/last-session` (written by login and by the `zs`
-sessionizer). Delete that file — or pick another session with `zs` / `Ctrl-f` —
-and login falls back to the session named after the host.
+Login never starts Zellij: the shell rc files no longer auto-attach. If an SSH
+login still lands in a session, the machine has a stale `~/.zshrc` /
+`~/.bashrc` — run `chezmoi update` there.
 
 ## Zellij will not start after an upgrade
 

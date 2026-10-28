@@ -190,11 +190,6 @@ zs() {
     # punctuation, so anything outside [alnum]_- is folded to a dash.
     _zs_name=$(printf '%s' "${_zs_sel##*/}" | tr -c '[:alnum:]_-' '-')
 
-    # Remember the choice so the next login's auto-attach lands here (~/.zshrc).
-    _zs_state="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
-    mkdir -p "$_zs_state" 2>/dev/null \
-        && printf '%s\n' "$_zs_name" > "$_zs_state/last-session" 2>/dev/null
-
     if zellij list-sessions -s 2>/dev/null | grep -qx -- "$_zs_name"; then
         _zs_new=''
     else

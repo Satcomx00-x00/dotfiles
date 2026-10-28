@@ -15,20 +15,6 @@ case $- in
     *) return ;;
 esac
 
-{{- if .autoAttach }}
-
-# ─── Zellij auto-attach (decision #13) ───────────────────────────────────────
-# Same guards as ~/.zshrc — see the comment there for why each one matters.
-if [ -z "$ZELLIJ" ] &&
-    [ -z "$ZELLIJ_SKIP" ] &&
-    [ -t 0 ] && [ -t 1 ] &&
-    [ -z "$VSCODE_INJECTION" ] &&
-    [ "$TERM" != "dumb" ] &&
-    command -v zellij >/dev/null 2>&1; then
-    ZELLIJ_AUTO_EXIT=true exec zellij attach --create "${HOSTNAME%%.*}"
-fi
-{{- end }}
-
 # ─── History ─────────────────────────────────────────────────────────────────
 HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/bash/history"
 [ -d "${HISTFILE%/*}" ] || mkdir -p "${HISTFILE%/*}"

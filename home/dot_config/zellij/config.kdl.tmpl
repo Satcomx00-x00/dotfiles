@@ -66,7 +66,7 @@ copy_command "xclip -selection clipboard"
 scrollback_editor "{{ .identity.editor }}"
 scroll_buffer_size 20000
 mouse_mode true
-// Sessions are named after the host and reattached on login (decision #13);
+// Sessions are opened on demand with `zs` (no login auto-attach);
 // serialising them means a reboot does not lose the layout.
 session_serialization true
 pane_viewport_serialization true

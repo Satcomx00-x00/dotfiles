@@ -10,7 +10,7 @@
   1. Every prompt has a defensible default derived from the machine itself, so
      the unattended path and the interactive path produce the same result.
 
-  2. The [data] block emits DERIVED values (fonts, autoAttach, chsh, ...) as
+  2. The [data] block emits DERIVED values (fonts, terminals, chsh, ...) as
      well as the raw answers. Consumers read the derived flag and never
      re-derive it. One question, answered once, in one place — a template that
      asks "is this a workstation?" for the fourth time is a template that will
@@ -72,10 +72,6 @@
     fonts      = {{ $isWorkstation }}
     # Ghostty/Alacritty are GUI apps: their config is meaningless elsewhere.
     terminals  = {{ $isWorkstation }}
-    # Zellij auto-attach on login — disabled everywhere: a login shell starts
-    # plain, and `zs` / Ctrl-f opens a session on demand. Set back to
-    # `{{ not $isContainer }}` to restore it (never in a container: it nests).
-    autoAttach = false
     # The image sets the shell in a container; chsh there is a no-op at best.
     chsh       = {{ not $isContainer }}
     # A staleness hint on an ephemeral host is noise about a machine that will
