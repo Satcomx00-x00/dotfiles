@@ -25,6 +25,33 @@ this configuration does — over a second on some Codespaces images. Compare
 against `zsh -d -ic exit`, which skips global rc files, before blaming anything
 here.
 
+## Every `cd` is slow, but startup is fine
+
+That is `mise hook-env`, which `mise activate` runs on every directory change. It
+is a full tool scan — roughly 10–15 ms per declared tool, so a 60-tool config
+pays most of a second per `cd`, and the cost tracks the size of `[tools]`, not the
+directory you are entering.
+
+This configuration replaces that hook so it runs only at project boundaries
+(decision #48, `report.md` §10.4). If `cd` is slow again, the guard has stopped
+applying:
+
+```sh
+mise activate zsh | grep -c chpwd_functions                # the hook must exist
+ls "${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/mise.stamp"    # the mtime guard
+```
+
+A missing stamp file costs one redundant scan and nothing else; it is recreated
+whenever the hook runs. To confirm the cost directly, time the hook in a
+directory that declares tools:
+
+```sh
+time (mise hook-env -s zsh >/dev/null)     # the scan the guard is avoiding
+```
+
+On Windows the same trade exists for PowerShell, and the equivalent guard lives
+in the profile (`docs/WINDOWS.md`).
+
 ## Nothing is themed / the prompt is boxes
 
 You are missing the Nerd Font, or the terminal is not using it. On a bare TTY

@@ -33,6 +33,30 @@ chezmoi init --apply --branch windows Satcomx00-x00
 Each Windows difference in a shared template sits behind
 `{{ if eq .chezmoi.os "windows" }}`, so Linux renders the same output as `main`.
 
+## The mise hook, and why it is not left alone
+
+`mise activate pwsh` registers a directory-change handler that runs
+`mise hook-env` on **every** `cd`, and that handler is a full tool scan — roughly
+10–15 ms per declared tool. With 62 tools declared here, most of a second per
+`cd`. The profile replaces it with a walk to the nearest project root that calls
+the real hook only when the answer changes, so moving around inside a project is
+free (decision #48, `report.md` §10.4; the POSIX equivalent is in
+`dot_config/shell/interactive.sh.tmpl`).
+
+Three things about the PowerShell version are worth knowing before editing it:
+
+- **`Get-Command mise` is a function after activation, and its `.Source` is
+  empty.** It is a wrapper that saves and restores `OutputEncoding` around the
+  real binary. So the executable path has to be captured *before* activation;
+  the handler calls that, not `Get-Command`.
+- **`$EventArgs.NewPath` is a `PathInfo`, not a string.** `StartsWith` on it
+  throws, and only once you are actually inside a project — outside one the
+  early return hides it.
+- **The activation output is cached** in `~\.cache\mise-activate.ps1`, keyed on
+  the config's mtime and the `mise` version, because evaluating `mise activate
+  pwsh` costs about a second and the config rarely changes. Deleting the cache is
+  always safe; it is rebuilt on the next start.
+
 ## Not managed on Windows
 
 - The POSIX shell stack (bash, zsh, `~/.config/shell`, zsh externals, `.sh` scripts).

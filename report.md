@@ -84,6 +84,7 @@ rest of the document elaborates on it.
 | 45 | Language tooling source | **mise for anything with a CLI**; mason.nvim only for DAP adapters |
 | 46 | Tool consolidation | **Keep direnv and just** — mise's built-in equivalents not adopted |
 | 47 | mise backend order | **aqua first, github fallback** — free cryptographic verification |
+| 48 | mise hook cost | **hook-env at project boundaries only** — the per-`cd` tool scan is replaced by an ancestor walk |
 
 ### Rejected alternatives
 
@@ -474,7 +475,7 @@ root feels like a plainer version of home, not a different machine.
 | `~/.config/shell/aliases.sh` | Interactive shells | Navigation, listing, safety rails, git, docker, kubernetes, terraform, chezmoi. Every alias depending on a modern tool is guarded so it degrades cleanly on a bare server |
 | `~/.config/shell/functions.sh` | Interactive shells | Extract-any-archive, mkdir-and-cd, `up N`, directory bookmarks, `sysinfo`, backup-file, port lookup |
 | `~/.config/shell/pickers.sh` | Interactive shells | The fzf pickers of decision #40 (see §8.4) |
-| `~/.config/shell/interactive.sh` | Interactive shells | Starship, zoxide, fzf, direnv and mise init — each guarded and shell-detected so one file serves both shells |
+| `~/.config/shell/interactive.sh` | Interactive shells | Starship, zoxide, fzf, direnv and mise init — each guarded and shell-detected so one file serves both shells. Init output is generated once into `$XDG_CACHE_HOME/dotfiles/init.$SHELL` and sourced, so startup forks nothing; the mise directory hook is reimplemented below it so the tool scan runs at project boundaries rather than on every `cd` (decision #48, §10.4) |
 | `~/.config/shell/secrets.sh` | Interactive shells, Bitwarden configured only | Tokens resolved from the vault at apply time |
 | `~/.config/shell/local.sh` | Every shell | **Not managed.** Machine-local overrides, never committed |
 
@@ -487,7 +488,9 @@ root feels like a plainer version of home, not a different machine.
 | `~/.bash_profile` | Sources `~/.profile` then `~/.bashrc` |
 | `~/.bashrc` | Interactive bash: history, shell options, shared layer, Starship, fzf keybindings, zoxide |
 
-**Startup budget:** under 60 ms for interactive zsh.
+**Startup budget:** under 60 ms for interactive zsh. The one thing that can
+blow it is a hook that shells out per event — `mise hook-env` on every `cd` is
+the concrete case, and §10.4 is how it is kept off the hot path.
 
 **Keybindings (decision #31): emacs mode.** Ctrl-a/e/w/u/k/r behave identically
 here, on a stock server, in bash, and in every REPL. No mode indicator, no ESC
@@ -767,6 +770,64 @@ Decision #20 and its exception.
 
 Bumping the two pinned tools is a deliberate two-line edit made when you have
 time to handle fallout.
+
+### 10.4 Hooks — paying at boundaries, not at every `cd`
+
+Decision #48. `mise activate` installs a directory-change hook that runs
+`mise hook-env` on **every** `cd`. That hook is a full tool scan: mise stats the
+installed directory of every declared tool to work out what the new directory
+needs. It is not free, and it scales with the config.
+
+Measured on a 62-tool config (Windows, PowerShell 7.6.9, but the scan itself is
+platform-independent shell-out):
+
+| Declared tools | `hook-env` |
+| --- | --- |
+| 0 | 135 ms |
+| 15 | 330 ms |
+| 30 | 403 ms |
+| 55 | 944 ms |
+
+Roughly **10–15 ms per declared tool**, paid per `cd`. Forty tools that are
+*declared but not installed* cost only 154 ms, which is the giveaway: the cost is
+scanning real directories, not parsing config. Backend matters too — an exotic
+one (`npm:`, `github:`, `pipx:`) costs ~62 ms against aqua's ~10 ms.
+
+Almost no `cd` needs this. A directory only changes the environment when it, or
+an ancestor, declares a tool version, because mise walks up to the nearest
+project root. So the hook is replaced with a walk to that root, using `test` — a
+builtin, no fork — and the real hook runs only when the answer **changes**:
+entering a project, moving to a different one, or leaving one. Moving around
+inside a project costs nothing.
+
+Three details carry the design:
+
+- **The stamp.** A boundary test alone would miss a version file edited in place
+  (`mise use` in a project that is already active), so a stamp file records when
+  the hook last ran and a newer version file counts as a boundary too. `[ -nt ]`
+  and `: >` are both builtins, so this is unmeasurable and needs no fork.
+  Stamped at startup as well, because activation already applied the
+  environment for the starting directory.
+- **bash needs its own prompt hook.** zsh has a real `chpwd`, so overriding
+  mise's hook is enough there. In bash two things defeat mise's hooks before
+  they can run: zoxide is initialised `--cmd cd`, so `cd` is zoxide's function
+  and it jumps through `builtin cd`, never dispatching `chpwd_functions`; and
+  `starship init bash` **replaces** `PROMPT_COMMAND`, discarding mise's prompt
+  hook. Left alone, bash would pay the scan on every prompt instead of at
+  boundaries — worse than the problem being fixed. So the same test gets a
+  prompt entry of its own, appended after the cached init has run.
+- **It is applied after the init cache is sourced.** The cache holds the output
+  of `mise activate` and friends and is keyed on the tools' presence; the guard
+  layer sits after it, so regenerating the cache never has to know about it.
+
+Cost after the change, on the slow machine above: cold start 3252 ms → 1056 ms,
+`cd` plus two prompts 1352 ms → 483 ms. Inside a project a `cd` still pays 76 ms,
+which is the point — that is the one case where the answer really changed.
+
+The same trade applies to the prompt: Starship's `command_timeout = 800` means
+one slow module stalls the prompt for most of a second, and its directory scan
+had no timeout at all, logging `Scanning current directory timed out` on every
+prompt. `scan_timeout = 100` bounds it.
 
 ---
 
