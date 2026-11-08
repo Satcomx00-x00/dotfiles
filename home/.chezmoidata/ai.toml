@@ -1,0 +1,51 @@
+# AI agent wiring — one skill hub, many agents, one Pi config.
+#
+# Consumed by .chezmoiscripts/run_always_after_70-ai-wiring.{sh,ps1}.tmpl.
+#
+# The problem: Claude, Pi, Command Code and OpenCode each read skills from their
+# own directory, so a skill installed once was invisible to the other three.
+# Copying trees around drifts silently; hand-linking is forgotten on the next
+# machine. So every agent directory holds LINKS into one hub, and the hub is the
+# only place content lives. Adding a skill is one directory in the hub; nothing
+# else is edited, and the next apply spreads it everywhere.
+#
+# Why per-skill links and not one link for the whole agent directory: an agent's
+# skills directory also holds trees the agent manages itself (Claude's plugin
+# sync writes ~/.claude/skills/synced, `orca skills install` maintains its own).
+# Replacing the whole directory with a link would either hide that content or
+# hand a third-party writer control of the hub's top level.
+#
+# Why run_always and not run_onchange: the thing that changes is the hub's
+# CONTENT, which no template hash can see. The script is idempotent and cheap
+# (a few dozen link checks), so it runs on every apply.
+#
+# The hub is populated out-of-band — plugin syncs and `skills install` write
+# into it. This file wires directories; it does not own third-party skill
+# content, which is why the repo stays publishable (decision #30).
+
+[ai]
+    # Agent Skills spec location (agentskills.io). Pi and Claude Code both scan it.
+    hub = ".agents/skills"
+
+    # Agent skill directories, relative to $HOME. Created if absent. Only list
+    # an agent you actually run: a directory for one you do not is noise the
+    # next reader has to verify.
+    targets = [
+        ".claude/skills",          # Claude Code
+        ".pi/agent/skills",        # Pi
+        ".commandcode/skills",     # Command Code
+        ".config/opencode/skills", # OpenCode
+    ]
+
+# Pi's global defaults, merged into <agent-dir>/settings.json at apply time.
+#
+# Merged rather than templated because Pi writes that file itself (package
+# changelog versions, extension state). A managed file would revert Pi's state
+# on every apply; a merge enforces the keys below and leaves the rest alone.
+#
+# Deliberately absent: auth.json (credentials), models-store.json (cache), and
+# packages (machine-local installs) — none of which belong in a public repo.
+[ai.pi]
+    provider = "openrouter"
+    model    = "deepseek/deepseek-v4.1-flash-1017"
+    theme    = "cc-dark"

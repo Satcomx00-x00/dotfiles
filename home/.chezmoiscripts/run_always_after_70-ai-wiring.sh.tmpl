@@ -1,0 +1,97 @@
+{{- if ne .chezmoi.os "windows" -}}
+#!/bin/sh
+# Phase 10a — spread the global skill hub into every agent's skills directory,
+# then enforce Pi's global defaults.
+#
+# ai.toml: {{ include ".chezmoidata/ai.toml" | sha256sum }}
+#
+# Runs on EVERY apply: what changes here is the hub's content, which no template
+# hash can observe. The work is a few dozen link checks, so the cost is nil.
+#
+# Why links: a skill edited in the hub must be the same skill every agent loads.
+# Copies drift silently, and the drift surfaces as an agent following stale
+# instructions with no error anywhere.
+#
+# Why per-skill links rather than one link per agent directory: those
+# directories also hold trees the agent manages itself (Claude's plugin sync
+# writes ~/.claude/skills/synced), so replacing the directory wholesale would
+# either hide that content or let a third-party writer own the hub's top level.
+#
+# OPTIONAL phase: an AI agent that is not installed is not a broken machine.
+
+set -eu
+
+log() { printf '  ai: %s\n' "$*" ; }
+
+HUB="$HOME/{{ .ai.hub }}"
+mkdir -p "$HUB" 2> /dev/null || exit 0
+
+# ─── 1. Hub → every agent directory ──────────────────────────────────────────
+# Only directories that actually contain SKILL.md are skills; the hub also holds
+# bookkeeping (.skill-lock.json) that must not be linked.
+skills=$(find "$HUB" -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/SKILL.md' \; -print 2> /dev/null | sed 's#.*/##' | sort)
+
+for target in {{ range .ai.targets }}"{{ . }}" {{ end }}; do
+    dir="$HOME/$target"
+
+    # An agent directory that is itself the hub needs no links inside it.
+    if [ -L "$dir" ] && [ "$(readlink "$dir")" = "$HUB" ]; then
+        log "$target is the hub"
+        continue
+    fi
+    mkdir -p "$dir" 2> /dev/null || continue
+
+    added=0 kept=0
+    for skill in $skills; do
+        link="$dir/$skill"
+        if [ -L "$link" ]; then
+            # Re-point a link that has drifted away from the hub.
+            if [ "$(readlink "$link")" != "$HUB/$skill" ]; then
+                rm -f "$link" && ln -s "$HUB/$skill" "$link" && added=$((added + 1))
+            else
+                kept=$((kept + 1))
+            fi
+        elif [ -e "$link" ]; then
+            # A real directory with content: this repository does not know what
+            # is in it, so it is never replaced.
+            kept=$((kept + 1))
+        else
+            ln -s "$HUB/$skill" "$link" 2> /dev/null && added=$((added + 1))
+        fi
+    done
+
+    # Drop links left behind by a skill removed from the hub.
+    for link in "$dir"/*; do
+        [ -L "$link" ] || continue
+        case "$link" in "$HUB"/*) continue ;; esac
+        tgt=$(readlink "$link" 2> /dev/null) || continue
+        case "$tgt" in "$HUB"/*) [ -e "$tgt" ] || rm -f "$link" ;; esac
+    done
+
+    log "$target: $added linked, $kept already present"
+done
+
+# ─── 2. Pi global settings ───────────────────────────────────────────────────
+AGENT_DIR="$HOME/.pi/agent"
+SETTINGS="$AGENT_DIR/settings.json"
+[ -d "$AGENT_DIR" ] || { log 'pi not installed — skipping settings'; exit 0; }
+
+if command -v jq > /dev/null 2>&1; then
+    tmp=$(mktemp)
+    if [ -f "$SETTINGS" ]; then
+        jq --arg p '{{ .ai.pi.provider }}' --arg m '{{ .ai.pi.model }}' --arg t '{{ .ai.pi.theme }}' \
+            '.defaultProvider = $p | .defaultModel = $m | .theme = $t' \
+            "$SETTINGS" > "$tmp" 2> /dev/null && mv "$tmp" "$SETTINGS" \
+            && log 'pi: provider, model and theme enforced'
+    else
+        jq -n --arg p '{{ .ai.pi.provider }}' --arg m '{{ .ai.pi.model }}' --arg t '{{ .ai.pi.theme }}' \
+            '{defaultProvider: $p, defaultModel: $m, theme: $t}' > "$SETTINGS" \
+            && log 'pi: settings created'
+    fi
+    rm -f "$tmp" 2> /dev/null || true
+else
+    log 'jq missing — pi settings untouched'
+fi
+
+exit 0
+{{- end }}

@@ -1,0 +1,113 @@
+{{- if eq .chezmoi.os "windows" -}}
+# Windows counterpart of run_always_after_70-ai-wiring.sh.
+#
+# ai.toml: {{ include ".chezmoidata/ai.toml" | sha256sum }}
+#
+# Same two jobs, Windows-shaped: junctions from every agent skill directory into
+# the global hub, then Pi's global defaults merged into settings.json.
+#
+# A junction, not a symlink: creating symlinks needs Developer Mode or elevation
+# on Windows, junctions need neither, and Windows follows junctions everywhere.
+#
+# Runs on EVERY apply: what changes here is the hub's content, which no template
+# hash can observe. The work is a few dozen link checks.
+#
+# OPTIONAL phase: an AI agent that is not installed is not a broken machine.
+
+$ErrorActionPreference = 'Continue'
+function log($m) { Write-Host "  ai: $m" }
+
+$hub = Join-Path $HOME '{{ .ai.hub }}'
+if (-not (Test-Path $hub)) { New-Item -ItemType Directory -Path $hub -Force | Out-Null }
+
+# Only directories that actually contain SKILL.md are skills; the hub also holds
+# bookkeeping (.skill-lock.json) that must not be linked.
+$skills = @(Get-ChildItem $hub -Directory -Force -ErrorAction SilentlyContinue |
+    Where-Object { Test-Path (Join-Path $_.FullName 'SKILL.md') })
+
+foreach ($rel in @({{ range $i, $t := .ai.targets }}{{ if $i }}, {{ end }}'{{ $t }}'{{ end }})) {
+    $dir = Join-Path $HOME ($rel -replace '/', '\')
+
+    # An agent directory that is itself the hub needs no links inside it.
+    if (Test-Path $dir) {
+        $existing = Get-Item $dir -Force
+        if (($existing.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
+            (($existing.Target -join '') -eq $hub)) {
+            log "$rel is the hub"
+            continue
+        }
+    } else {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+
+    $added = 0; $kept = 0
+    foreach ($s in $skills) {
+        $link = Join-Path $dir $s.Name
+        $want = $s.FullName
+        if (Test-Path $link) {
+            $item = Get-Item $link -Force
+            if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                if (($item.Target -join '') -ne $want) {
+                    [System.IO.Directory]::Delete($link, $false)
+                    New-Item -ItemType Junction -Path $link -Target $want | Out-Null
+                    $added++
+                } else { $kept++ }
+            } else {
+                # A real directory with content: never replaced, we do not know
+                # what is in it.
+                $kept++
+            }
+        } else {
+            New-Item -ItemType Junction -Path $link -Target $want | Out-Null
+            $added++
+        }
+    }
+
+    # Drop junctions left behind by a skill removed from the hub.
+    foreach ($e in @(Get-ChildItem $dir -Force -ErrorAction SilentlyContinue)) {
+        if (-not ($e.Attributes -band [IO.FileAttributes]::ReparsePoint)) { continue }
+        $tgt = ($e.Target -join '')
+        if ($tgt -like ($hub + '\*') -and -not (Test-Path $tgt)) {
+            [System.IO.Directory]::Delete($e.FullName, $false)
+        }
+    }
+
+    log "$rel : $added linked, $kept already present"
+}
+
+# ─── Pi global settings ──────────────────────────────────────────────────────
+$agentDir = Join-Path $HOME '.pi\agent'
+$settings = Join-Path $agentDir 'settings.json'
+if (-not (Test-Path $agentDir)) { log 'pi not installed — skipping settings'; exit 0 }
+
+$defaults = [ordered]@{
+    defaultProvider = '{{ .ai.pi.provider }}'
+    defaultModel    = '{{ .ai.pi.model }}'
+    theme           = '{{ .ai.pi.theme }}'
+}
+
+$cfg = [ordered]@{}
+if (Test-Path $settings) {
+    try {
+        $raw = Get-Content $settings -Raw | ConvertFrom-Json
+        foreach ($p in $raw.PSObject.Properties) { $cfg[$p.Name] = $p.Value }
+    } catch {
+        log 'pi: settings.json unreadable — left untouched'
+        exit 0
+    }
+}
+
+$changed = $false
+foreach ($k in $defaults.Keys) {
+    if ($cfg[$k] -ne $defaults[$k]) { $cfg[$k] = $defaults[$k]; $changed = $true }
+}
+
+if ($changed -or -not (Test-Path $settings)) {
+    $cfg | ConvertTo-Json -Depth 32 | Set-Content -Path $settings -Encoding utf8
+    log 'pi: provider, model and theme enforced'
+} else {
+    log 'pi: settings already current'
+}
+
+exit 0
+{{- end }}
