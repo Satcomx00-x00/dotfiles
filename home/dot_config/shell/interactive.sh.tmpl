@@ -105,6 +105,130 @@ fi
 
 unset _dotfiles_sig _dotfiles_cached_sig
 
+# ─── mise: pay for hook-env only at project boundaries ───────────────────────
+# `mise activate` registers a chpwd hook that runs `mise hook-env` on EVERY
+# directory change. That is a full tool scan — ~10-15 ms per declared tool, so
+# a 62-tool config pays most of a second per `cd`. Almost no `cd` needs it: a
+# directory only matters when it, or an ancestor, declares a tool version,
+# because mise walks up to the nearest project root.
+#
+# So mise's chpwd hook is replaced below. It walks up from $PWD with `test`,
+# which is a shell builtin and forks nothing, and calls the real hook only when
+# the answer CHANGES: entering a project, moving to a different one, or leaving
+# one. Moving around inside a project costs nothing. The flag mise's chpwd hook
+# is expected to set is set either way, so the prompt that follows a `cd` is
+# free too — mise's precmd hook returns early when it sees it.
+#
+# The boundary test alone would miss a version file edited IN PLACE (`mise use`
+# inside a project already active). So a boundary is not the only trigger: a
+# stamp file records when the hook last ran, and the file dated after it counts
+# as a boundary too. Both the mtime test and the rewrite are shell builtins, so
+# this costs the prompt nothing measurable and needs no fork.
+#
+# Everything here runs AFTER the cached init is sourced, so it never has to be
+# rebuilt when the cache is regenerated.
+if [ -n "${MISE_SHELL:-}" ] && command -v _mise_hook >/dev/null 2>&1; then
+    # Sets _dotfiles_mise_found to the nearest ancestor declaring a tool
+    # version, or to '' when there is none. No subshell, no fork.
+    _dotfiles_mise_find() {
+        _dotfiles_mise_found=''
+        _dotfiles_mise_probe=$PWD
+        while [ -n "$_dotfiles_mise_probe" ]; do
+            for _dotfiles_mise_file in mise.toml .mise.toml .tool-versions .nvmrc .python-version; do
+                if [ -e "$_dotfiles_mise_probe/$_dotfiles_mise_file" ]; then
+                    _dotfiles_mise_found=$_dotfiles_mise_probe
+                    unset _dotfiles_mise_probe _dotfiles_mise_file
+                    return 0
+                fi
+            done
+            # Stop at the root: `${x%/*}` on / yields / and would loop forever.
+            [ "$_dotfiles_mise_probe" = / ] && break
+            _dotfiles_mise_probe=${_dotfiles_mise_probe%/*}
+        done
+        unset _dotfiles_mise_probe _dotfiles_mise_file
+        return 0
+    }
+
+    # Seed it, so the first `cd` inside the directory the shell started in does
+    # not re-run the scan that activation already did.
+    _dotfiles_mise_find
+    _dotfiles_mise_root=$_dotfiles_mise_found
+    unset _dotfiles_mise_found
+
+    # Marks when hook-env last ran. `: >` only updates the mtime; the file is
+    # never read, so its contents do not matter. Stamped at startup too: the
+    # activation above already applied the environment for the starting
+    # directory, so nothing is owed on the first prompt.
+    _dotfiles_mise_stamp="$_dotfiles_cache_dir/mise.stamp"
+    : >"$_dotfiles_mise_stamp" 2>/dev/null || :
+    _dotfiles_mise_stale() {
+        [ -n "$_dotfiles_mise_root" ] || return 1
+        for _dotfiles_mise_file in mise.toml .mise.toml .tool-versions .nvmrc .python-version; do
+            if [ -e "$_dotfiles_mise_root/$_dotfiles_mise_file" ] &&
+                [ "$_dotfiles_mise_root/$_dotfiles_mise_file" -nt "$_dotfiles_mise_stamp" ]; then
+                unset _dotfiles_mise_file
+                return 0
+            fi
+        done
+        unset _dotfiles_mise_file
+        return 1
+    }
+
+    _mise_hook_chpwd() {
+        # shellcheck disable=SC2319 # dispatches from zsh's chpwd hook, mise's
+        # own cd wrapper, and the bash prompt hook below; in the last of those
+        # `$?` is the test above rather than a command, which is harmless — the
+        # status being preserved belongs to whatever ran before the hook.
+        _dotfiles_mise_rc=$?
+        # What mise's own hook sets. bash keeps its own flag, zsh exports its
+        # own; setting both is harmless in either shell and saves a branch.
+        __MISE_BASH_CHPWD_RAN=1
+        export __MISE_ZSH_CHPWD_RAN=1
+        _dotfiles_mise_find
+        if [ "$_dotfiles_mise_found" != "$_dotfiles_mise_root" ] || _dotfiles_mise_stale; then
+            _dotfiles_mise_root=$_dotfiles_mise_found
+            _mise_hook --reason chpwd
+            : >"$_dotfiles_mise_stamp"
+        fi
+        # Tells the bash prompt hook below that this change is already paid for.
+        _dotfiles_mise_last_pwd=$PWD
+        return "$_dotfiles_mise_rc"
+    }
+
+    # bash registers hooks by name in chpwd_functions, zsh through
+    # add-zsh-hook; both keep a reference to the NAME, so redefining the
+    # function after mise defined it takes effect without re-registering.
+    #
+    # zsh has a real chpwd, so the override above is enough there. bash needs
+    # one more entry, because two things in this file defeat mise's bash-side
+    # hooks before they can run: zoxide is initialised with `--cmd cd`, so `cd`
+    # is zoxide's function and it jumps via `builtin cd`, never dispatching
+    # chpwd_functions; and `starship init bash` REPLACES PROMPT_COMMAND, which
+    # discards mise's own prompt hook. Left alone, bash users would pay the full
+    # tool scan on every prompt instead of at boundaries — worse than what this
+    # block is here to fix. So the same test gets a prompt hook of its own,
+    # appended after the cached init has run (and therefore after starship).
+    # Outside a project this costs one string compare; inside one, a handful of
+    # `[ -nt ]` tests, all builtins. That is what lets a version file edited in
+    # place — `mise use` in a project that is already active — be noticed on the
+    # next prompt, with no `cd` at all.
+    if [ "$_dotfiles_shell" = bash ]; then
+        _dotfiles_mise_last_pwd=$PWD
+        _dotfiles_mise_prompt_hook() {
+            _dotfiles_mise_rc=$?
+            if [ "$PWD" != "$_dotfiles_mise_last_pwd" ] || _dotfiles_mise_stale; then
+                _mise_hook_chpwd
+            fi
+            return "$_dotfiles_mise_rc"
+        }
+        case "${PROMPT_COMMAND:-}" in
+            *_dotfiles_mise_prompt_hook*) ;;
+            '') PROMPT_COMMAND='_dotfiles_mise_prompt_hook' ;;
+            *) PROMPT_COMMAND="_dotfiles_mise_prompt_hook; $PROMPT_COMMAND" ;;
+        esac
+    fi
+fi
+
 # ─── GPG_TTY ─────────────────────────────────────────────────────────────────
 # Set here rather than in env.sh: it needs $(tty), and env.sh runs for every
 # non-interactive shell on the machine. gpg only ever needs it on a terminal.

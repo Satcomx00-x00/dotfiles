@@ -80,6 +80,12 @@ right_format = """$cmd_duration$status$time"""
 add_newline = true
 palette = 'neopurple'
 command_timeout = 800
+# How long starship may spend walking the current directory to work out which
+# language/tool modules apply. Unset (the upstream default is 30 ms), a large
+# tree times out and starship writes a warning into the prompt area on every
+# render. 100 ms is generous enough to finish in ordinary repositories and
+# still bounded, so the prompt cannot stall on a slow filesystem.
+scan_timeout = 100
 
 [palettes.neopurple]
 # The ramp. Everything ambient is one of these five.
