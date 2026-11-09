@@ -24,15 +24,18 @@ repos:
         name: shellcheck
         entry: shellcheck --severity=warning --shell=sh --exclude=SC1090,SC1091
         language: system
-        files: '\.sh$'
-        exclude: '^portable\.sh$'   # generated; checked as a whole by `make lint`
+        # dot_local/bin scripts carry no .sh suffix (the rendered name is the
+        # command), so match the source prefix as well. Templates are rendered
+        # by `make lint`, not parsed as shell here.
+        files: '(\.sh$|^home/dot_local/bin/executable_)'
+        exclude: '(^portable\.sh$|\.tmpl$)'
 
       - id: shfmt
         name: shfmt
         entry: shfmt -i 4 -ci -sr -d
         language: system
-        files: '\.sh$'
-        exclude: '^portable\.sh$'
+        files: '(\.sh$|^home/dot_local/bin/executable_)'
+        exclude: '(^portable\.sh$|\.tmpl$)'
 
       - id: stylua
         name: stylua

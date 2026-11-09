@@ -1,0 +1,136 @@
+#!/bin/sh
+# claude-an — run Claude Code on your own Anthropic account, regardless of the
+# global OpenRouter switch.
+#
+# POSIX-sh counterpart of ~/.local/bin/claude-an.ps1. Managed by chezmoi: edit
+# home/dot_local/bin/executable_claude-an, not the rendered copy.
+#
+# Nothing on disk is modified and the switch state is left alone. The OpenRouter
+# variables are cleared for this process tree only, then the normal secrets
+# drop-in is re-sourced so an ANTHROPIC_API_KEY that the switch had unset is
+# restored. Your ~/.claude login and settings are used again.
+#
+# Wrapper options:
+#   -Print       show the resolved target and exit
+#   --or-help    show this help
+#   --           everything after this goes to claude untouched
+#
+# Examples:
+#   claude-an
+#   claude-an -p "hello"
+#   claude-an --resume
+
+set -eu
+
+CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
+
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    C_DIM=$(printf '\033[2m')
+    C_RED=$(printf '\033[31m')
+    C_RESET=$(printf '\033[0m')
+else
+    C_DIM='' C_RED='' C_RESET=''
+fi
+
+dim() { printf '%s%s%s\n' "$C_DIM" "$*" "$C_RESET"; }
+err() { printf '%s%s%s\n' "$C_RED" "$*" "$C_RESET" >&2; }
+die() {
+    err "$*"
+    exit 1
+}
+
+show_help() {
+    cat << 'EOF'
+claude-an — run Claude Code on your own Anthropic account.
+
+Clears the OpenRouter overrides for this process tree only and falls back to
+~/.claude (your normal login + settings). The global switch is left untouched.
+
+Wrapper options:
+  -Print       show the resolved target and exit
+  --or-help    show this help
+  --           everything after this goes to claude untouched
+
+Examples:
+  claude-an
+  claude-an -p "hello"
+  claude-an --resume
+EOF
+}
+
+# ─── Argument parsing ────────────────────────────────────────────────────────
+# Same rotation as claude-or: consume from the front, re-append everything the
+# wrapper does not claim. No eval, no quoting loss.
+show_cfg=0
+show_help_flag=0
+remaining=$#
+
+while [ "$remaining" -gt 0 ]; do
+    tok=$1
+    shift
+    remaining=$((remaining - 1))
+
+    case $tok in
+        --)
+            while [ "$remaining" -gt 0 ]; do
+                _t=$1
+                shift
+                remaining=$((remaining - 1))
+                set -- "$@" "$_t"
+            done
+            break
+            ;;
+        -[Pp]rint | --or-print)
+            show_cfg=1
+            continue
+            ;;
+        --or-help | -orhelp)
+            show_help_flag=1
+            continue
+            ;;
+    esac
+
+    set -- "$@" "$tok"
+done
+
+if [ "$show_help_flag" -eq 1 ]; then
+    show_help
+    exit 0
+fi
+
+# ANTHROPIC_API_KEY is deliberately not in this list: when the switch is off it
+# is the user's normal credential, and claude-an must not break that setup. When
+# the switch is on, env.sh has already unset it, and secrets.sh restores it
+# below if the machine has one.
+unset CLAUDE_CONFIG_DIR ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN
+unset ANTHROPIC_DEFAULT_FABLE_MODEL ANTHROPIC_DEFAULT_OPUS_MODEL
+unset ANTHROPIC_DEFAULT_SONNET_MODEL ANTHROPIC_DEFAULT_HAIKU_MODEL
+unset CLAUDE_CODE_SUBAGENT_MODEL CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY
+
+# The switch may have blanked ANTHROPIC_API_KEY. The generated secrets drop-in
+# (only present with the bitwarden backend) restores the real value.
+if [ -r "$CONFIG_HOME/shell/secrets.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$CONFIG_HOME/shell/secrets.sh"
+fi
+
+if [ "$show_cfg" -eq 1 ]; then
+    printf '%-18s: %s\n' 'CLAUDE_CONFIG_DIR' '<default: ~/.claude>'
+    printf '%-18s: %s\n' 'ANTHROPIC_BASE_URL' '<default: Anthropic direct>'
+    printf '%-18s: %s\n' 'AUTH' '<cached Anthropic login or ANTHROPIC_API_KEY>'
+    printf '%-18s: %s\n' 'ClaudeArgs' "$*"
+    printf '%-18s: %s\n' 'SwitchUnaffected' 'yes'
+    exit 0
+fi
+
+_claude=$(command -v claude 2> /dev/null) || {
+    err 'claude not found on PATH.'
+    err 'Install Claude Code first: https://claude.ai/install.sh'
+    exit 127
+}
+case $_claude in
+    /*) ;;
+    *) die 'claude resolved to a shell function or builtin; run this from a fresh shell' ;;
+esac
+
+exec "$_claude" "$@"

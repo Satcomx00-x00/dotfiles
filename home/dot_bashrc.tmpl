@@ -67,6 +67,12 @@ for _f in aliases functions pickers interactive secrets; do
 done
 unset _f _dotfiles_shell_dir
 
+# Apply the Claude Code provider switch once more, after secrets.sh: that
+# drop-in can re-export ANTHROPIC_API_KEY, and Claude Code then ignores the
+# OpenRouter gateway token. Also sourced from env.sh for non-interactive shells.
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/claude-or/env.sh" ] &&
+    . "${XDG_CONFIG_HOME:-$HOME/.config}/claude-or/env.sh"
+
 # Completion for the bookmark functions defined in functions.sh.
 _dotfiles_marks_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"

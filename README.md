@@ -89,6 +89,7 @@ independent, so a small VPS can be a `server` on `minimal`.
 | Tools | mise, `aqua` backend first for free signature verification |
 | Clipboard | OSC52 — yanking on a remote server reaches your local clipboard |
 | Secrets | Bitwarden at apply time; nothing sensitive in the repo |
+| AI | Claude Code through OpenRouter (DeepSeek) or your Anthropic account — `claude-or`, see [docs/OPENROUTER.md](docs/OPENROUTER.md) |
 
 ### Tool inventory
 

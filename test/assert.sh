@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2088  # the ~/… strings below are display labels, not paths
 # test/assert.sh — post-apply assertions. Runs INSIDE the sandbox container.
 #
 # Assertions are derived from the data files wherever possible rather than
@@ -54,6 +55,10 @@ expect_managed 'dot_config/git/config*' '.config/git/config' 'git config'
 expect_managed 'dot_config/mise/config.toml*' '.config/mise/config.toml' 'mise config'
 expect_managed 'dot_config/starship.toml*' '.config/starship.toml' 'starship config'
 expect_managed 'dot_local/bin/executable_dotfiles*' '.local/bin/dotfiles' 'dotfiles command'
+expect_managed 'dot_local/bin/executable_claude-or' '.local/bin/claude-or' 'claude-or command'
+expect_managed 'dot_local/bin/executable_claude-an' '.local/bin/claude-an' 'claude-an command'
+expect_managed 'dot_local/bin/executable_claude-or-key' '.local/bin/claude-or-key' 'claude-or-key command'
+expect_managed 'dot_local/bin/executable_claude-or-status' '.local/bin/claude-or-status' 'claude-or-status command'
 
 # ─── The load-silence contract (§5) ──────────────────────────────────────────
 # A shell rc that prints anything breaks scp, rsync and git-over-ssh. This is

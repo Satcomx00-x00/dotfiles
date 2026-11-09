@@ -38,12 +38,20 @@ if have shellcheck; then
         shellcheck --severity=warning --shell=sh --exclude=SC1090,SC1091 "$f" ||
             fail "shellcheck ${f#"$BUILD"/}"
     done
+
+    # Plain executables under dot_local/bin are not templates, so they never
+    # appear in $BUILD. They are POSIX shell by convention; check them in place.
+    for f in $(find "$ROOT/home/dot_local/bin" -type f -name 'executable_*' \
+        ! -name '*.tmpl' 2> /dev/null | sort); do
+        shellcheck --severity=warning --shell=sh --exclude=SC1090,SC1091 "$f" ||
+            fail "shellcheck ${f#"$ROOT"/}"
+    done
 else
     skip 'shellcheck not installed'
 fi
 
 # ─── 2. Parser checks in the real interpreters ───────────────────────────────
-# shellcheck cannot parse zsh at all, so zsh files get zsh's own parser. This is
+# ShellCheck cannot parse zsh at all, so zsh files get zsh's own parser. This is
 # the only thing standing between a typo in .zshrc and an unusable remote box.
 printf '── syntax\n'
 for f in $(find "$BUILD" -type f \
@@ -60,7 +68,7 @@ done
 
 # The shared layer must parse under a *strict* POSIX shell, not just bash's
 # permissive POSIX mode — dash is what /bin/sh actually is on Debian.
-POSIX_SH=sh
+POSIX_SH='sh'
 have dash && POSIX_SH=dash
 for f in $(find "$BUILD" -type f -path '*/.config/shell/*' ! -name '*.toml' | sort); do
     [ -s "$f" ] || continue
@@ -72,7 +80,10 @@ printf '── shfmt (sources)\n'
 if have shfmt; then
     # -i 4 -ci -sr matches .editorconfig's 4-space shell indent.
     plain=$(find "$ROOT/test" "$ROOT/scripts" -type f -name '*.sh' 2> /dev/null | sort)
-    [ -f "$ROOT/install.sh" ] && plain="$plain $ROOT/install.sh"
+    plain_bins=$(find "$ROOT/home/dot_local/bin" -type f -name 'executable_*' \
+        ! -name '*.tmpl' 2> /dev/null | sort)
+    plain="$plain $plain_bins"
+    if [ -f "$ROOT/install.sh" ]; then plain="$plain $ROOT/install.sh"; fi
     for f in $plain; do
         shfmt -i 4 -ci -sr -d "$f" || fail "shfmt ${f#"$ROOT"/}"
     done

@@ -1,0 +1,254 @@
+#!/bin/sh
+# claude-or-key — manage the OpenRouter API key used by the claude-or profile.
+#
+# POSIX-sh counterpart of ~/.local/bin/claude-or-key.ps1. Managed by chezmoi:
+# edit home/dot_local/bin/executable_claude-or-key, not the rendered copy.
+#
+# The key lives in ~/.claude-profiles/openrouter/openrouter.key with mode 0600.
+# Linux has no DPAPI, and a desktop keyring would make this command fail over
+# SSH and in containers, so a private file is the trust model — the same one
+# ssh(1) and the AWS CLI use.
+#
+# Commands:
+#   --set-key [KEY]   store or replace the key; prompts when KEY is omitted
+#   --status          ask OpenRouter for credit usage on the stored key
+#   --clear           delete the stored key
+#   (none)            show the key fingerprint and storage path
+#
+# The Windows spellings -SetKey, -Status, -Clear and -Key are accepted too.
+
+set -eu
+
+CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
+PROFILE_ROOT=${CLAUDE_OR_PROFILE:-$HOME/.claude-profiles/openrouter}
+STATE_DIR=${CLAUDE_OR_STATE_DIR:-$CONFIG_HOME/claude-or}
+SWITCH_FILE=$STATE_DIR/env.sh
+KEY_FILE=$PROFILE_ROOT/openrouter.key
+SELF_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    C_DIM=$(printf '\033[2m')
+    C_RED=$(printf '\033[31m')
+    C_GREEN=$(printf '\033[32m')
+    C_YELLOW=$(printf '\033[33m')
+    C_RESET=$(printf '\033[0m')
+else
+    C_DIM='' C_RED='' C_GREEN='' C_YELLOW='' C_RESET=''
+fi
+
+ok() { printf '%s%s%s\n' "$C_GREEN" "$*" "$C_RESET"; }
+warn() { printf '%s%s%s\n' "$C_YELLOW" "$*" "$C_RESET"; }
+dim() { printf '%s%s%s\n' "$C_DIM" "$*" "$C_RESET"; }
+err() { printf '%s%s%s\n' "$C_RED" "$*" "$C_RESET" >&2; }
+die() {
+    err "$*"
+    exit 1
+}
+
+show_help() {
+    cat << 'EOF'
+claude-or-key — manage the OpenRouter API key for the claude-or profile.
+
+  --set-key [KEY]   store or replace the key; prompts when KEY is omitted
+  --status          ask OpenRouter for credit usage on the stored key
+  --clear           delete the stored key
+  --or-help         this help
+
+With no command, show the key fingerprint and storage path.
+
+The key is stored in ~/.claude-profiles/openrouter/openrouter.key, mode 0600.
+OpenRouter credit status is also available as `claude-or-status`.
+EOF
+}
+
+read_key() {
+    [ -r "$KEY_FILE" ] || return 1
+    _stored=$(cat -- "$KEY_FILE" 2> /dev/null) || return 1
+    [ -n "$_stored" ] || return 1
+    printf '%s' "$_stored"
+}
+
+mask() {
+    if [ "${#1}" -gt 12 ]; then
+        _first=${1%"${1#????????}"}
+        _last=${1#"${1%????}"}
+        printf '%s...%s' "$_first" "$_last"
+    else
+        printf '<set>'
+    fi
+}
+
+# ─── Parse ───────────────────────────────────────────────────────────────────
+action=''
+key_arg=''
+show_help_flag=0
+
+while [ $# -gt 0 ]; do
+    case $1 in
+        --set-key | -SetKey)
+            action='set'
+            shift
+            # `--set-key KEY` is accepted as well as `--set-key=KEY`; with no
+            # argument the key is read from the terminal instead.
+            if [ $# -gt 0 ]; then
+                case $1 in
+                    -*) ;;
+                    *)
+                        key_arg=$1
+                        shift
+                        ;;
+                esac
+            fi
+            ;;
+        --set-key=*)
+            action='set'
+            key_arg=${1#*=}
+            shift
+            ;;
+        --key | -Key)
+            [ $# -ge 2 ] || die "$1 needs a value"
+            action='set'
+            key_arg=$2
+            shift 2
+            ;;
+        --key=* | -Key=*)
+            action='set'
+            key_arg=${1#*=}
+            shift
+            ;;
+        --status | -Status)
+            action='status'
+            shift
+            ;;
+        --clear | -Clear)
+            action='clear'
+            shift
+            ;;
+        --or-help | -orhelp | --help | -h)
+            show_help_flag=1
+            shift
+            ;;
+        *)
+            die "unknown argument: $1 (try --or-help)"
+            ;;
+    esac
+done
+
+if [ "$show_help_flag" -eq 1 ]; then
+    show_help
+    exit 0
+fi
+
+# ─── Set ─────────────────────────────────────────────────────────────────────
+if [ "$action" = set ]; then
+    if [ -z "$key_arg" ]; then
+        if [ -t 0 ] && command -v stty > /dev/null 2>&1; then
+            printf 'OpenRouter API key (sk-or-v1-...): ' >&2
+            stty -echo 2> /dev/null || :
+            trap 'stty echo 2>/dev/null' INT HUP TERM
+            IFS= read -r key_arg || {
+                stty echo 2> /dev/null || :
+                printf '\n' >&2
+                die 'aborted'
+            }
+            stty echo 2> /dev/null || :
+            trap - INT HUP TERM
+            printf '\n' >&2
+        else
+            printf 'OpenRouter API key (sk-or-v1-...): ' >&2
+            IFS= read -r key_arg || die 'aborted'
+        fi
+    fi
+
+    # A key pasted from a CRLF or wrapped terminal should not carry line
+    # breaks into the header.
+    key_arg=$(printf '%s' "$key_arg" | tr -d '\r\n')
+    [ -n "$key_arg" ] || die 'empty key, aborted'
+    case $key_arg in
+        sk-or-*) ;;
+        *) warn 'warning: this does not look like an OpenRouter key (sk-or-...)' ;;
+    esac
+
+    umask 077
+    mkdir -p "$PROFILE_ROOT"
+    chmod 700 "$PROFILE_ROOT" 2> /dev/null || :
+    printf '%s' "$key_arg" > "$KEY_FILE"
+    chmod 600 "$KEY_FILE"
+
+    ok "Key stored: $KEY_FILE"
+    dim 'Verify with: claude-or-key --status'
+
+    # The switch file reads this key with the shell's read builtin, so a new
+    # key needs no rewrite of anything. New shells pick it up automatically.
+    if [ -f "$SWITCH_FILE" ]; then
+        dim 'OpenRouter is currently enabled; new shells use the new key.'
+    fi
+    exit 0
+fi
+
+# ─── Clear ───────────────────────────────────────────────────────────────────
+if [ "$action" = clear ]; then
+    if [ -f "$KEY_FILE" ]; then
+        rm -f "$KEY_FILE"
+        ok 'Stored OpenRouter key deleted.'
+    else
+        dim 'No stored key.'
+    fi
+    # With the key gone the switch would point at OpenRouter with no
+    # credentials. Turn it off rather than leave a half-configured machine.
+    if [ -f "$SWITCH_FILE" ]; then
+        claude_or=$SELF_DIR/claude-or
+        if [ ! -x "$claude_or" ]; then
+            claude_or=$(command -v claude-or 2> /dev/null) || claude_or=''
+        fi
+        if [ -n "$claude_or" ]; then
+            "$claude_or" disable > /dev/null
+        else
+            rm -f "$SWITCH_FILE"
+        fi
+        dim 'The global OpenRouter switch was on; it is now off.'
+    fi
+    exit 0
+fi
+
+# ─── Status / info ───────────────────────────────────────────────────────────
+if ! stored=$(read_key); then
+    warn 'No key stored. Run: claude-or-key --set-key'
+    exit 1
+fi
+
+if [ "$action" != status ]; then
+    printf '%-10s: %s\n' 'Key' "$(mask "$stored")"
+    printf '%-10s: %s\n' 'Stored at' "$KEY_FILE"
+    printf '%-10s: %s\n' 'Protected' 'file mode 0600 (this account on this machine)'
+    exit 0
+fi
+
+command -v curl > /dev/null 2>&1 || die 'curl is required for --status'
+command -v jq > /dev/null 2>&1 || die 'jq is required for --status'
+
+# The key goes through stdin, not argv: a header on the command line is visible
+# in `ps` for as long as curl runs.
+if ! response=$(printf 'Authorization: Bearer %s\n' "$stored" |
+    curl -fsS --max-time 30 -H @- 'https://openrouter.ai/api/v1/key' 2> /dev/null); then
+    err 'OpenRouter key check failed (bad key, offline, or rate-limited).'
+    exit 1
+fi
+
+printf '%s' "$response" | jq -r '
+    def usd:
+        if . == null then null
+        else "$" + ((. * 100 | round) / 100 | tostring)
+        end;
+    "Label     : \(.data.label // "-")",
+    "Limit     : \(.data.limit | usd // "unlimited")",
+    "Usage     : \(.data.usage | usd // "$0")",
+    "Remaining : \(.data.limit_remaining | usd // "-")",
+    "Free tier : \(.data.is_free_tier // false)"
+'
+
+if printf '%s' "$response" |
+    jq -e '.data.limit_remaining != null and .data.limit_remaining <= 0' \
+        > /dev/null 2>&1; then
+    warn 'Key has no remaining credit. Consider: claude-or disable'
+fi

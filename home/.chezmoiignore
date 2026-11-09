@@ -48,3 +48,8 @@
 # files that would turn a public repo into a map of your estate.
 .config/shell/local.sh
 .ssh/config.d
+
+# Claude Code profile state and the OpenRouter switch: runtime data written by
+# the installed `claude-or` commands, never sourced from this repo.
+.claude-profiles
+.config/claude-or

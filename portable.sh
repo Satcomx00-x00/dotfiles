@@ -567,6 +567,22 @@ sysinfo() {
     return 0
 }
 
+# @group ai — coding assistants
+
+if command -v claude >/dev/null 2>&1; then
+    # @help Claude Code with Remote Control, session named <repo>@<branch>
+    claude() {
+        # Outside a repo the session takes the directory's name; on a detached
+        # HEAD there is no branch, so the suffix is dropped.
+        _top=$(git rev-parse --show-toplevel 2>/dev/null) || _top=$PWD
+        # `feat/x` would put a path separator in the session name.
+        _branch=$(git branch --show-current 2>/dev/null | tr '/' '-')
+        set -- --remote-control "${_top##*/}${_branch:+@$_branch}" "$@"
+        unset _top _branch
+        command claude "$@"
+    }
+fi
+
 # ─── Prompt and shell behaviour ──────────────────────────────────────────────
 # Starship is not installed on a box like this, so the prompt is built from
 # what every shell already has. Same information, no dependencies: user, host,

@@ -1,0 +1,22 @@
+#!/bin/sh
+# claude-or-status — remaining OpenRouter credit for the stored key.
+#
+# Kept as a separate command for muscle memory from the Windows setup; the
+# implementation lives in claude-or-key --status.
+
+set -eu
+
+SELF_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+
+# Normally a sibling, because chezmoi installs all four commands together.
+# The PATH fallback keeps the command usable from a source checkout or when one
+# script is symlinked on its own.
+target=$SELF_DIR/claude-or-key
+if [ ! -x "$target" ]; then
+    target=$(command -v claude-or-key 2> /dev/null) || {
+        printf 'claude-or-status: claude-or-key not found\n' >&2
+        exit 127
+    }
+fi
+
+exec "$target" --status "$@"
